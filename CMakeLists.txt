@@ -1,12 +1,15 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(ergodic_exploration)
 
-## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+# add compile options
+add_compile_options(-Wall -Wextra)
 
-## Find catkin macros and libraries
-## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
-## is used, also find other catkin packages
+# Compile as C++20
+set(CMAKE_CXX_STANDARD 20)
+# don't use gnu extensions
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 find_package(catkin REQUIRED COMPONENTS
   roscpp
 )
