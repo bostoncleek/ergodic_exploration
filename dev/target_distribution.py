@@ -1,5 +1,4 @@
 import numpy as np
-import numpy.random as npr
 
 class TargetDist(object):
     def __init__(self, num_pts=50):
@@ -8,11 +7,13 @@ class TargetDist(object):
         # create 2D grid on domain [0 1] x [0 1]
         grid = np.meshgrid(*[np.linspace(0, 1, num_pts) for _ in range(2)])
         self.grid = np.c_[grid[0].ravel(), grid[1].ravel()]
-
         # two distributions
         # means and variance of each
         self.means = [np.array([0.7, 0.7]), np.array([0.3,0.3])]
         self.vars  = [np.array([0.1,0.1])**2, np.array([0.1,0.1])**2]
+
+        # self.means = [np.array([0.5, 0.5])]
+        # self.vars = [np.array([0.1, 0.1])]
 
         self.grid_vals = self.__call__(self.grid)
 
@@ -28,6 +29,18 @@ class TargetDist(object):
     #     for i, p in enumerate(x):
     #         val[i] = self.spatial_distribution(p)
     #     return val
+
+    def sample_points(self, x):
+        return self.__call__(x)
+
+    def sample_grid_spec(self, x, sample_vals):
+        xy = []
+        num_pts = int(np.sqrt(sample_vals.shape))
+        for g in x.T:
+            xy.append(
+                np.reshape(g, newshape=(num_pts, num_pts))
+            )
+        return xy, sample_vals.reshape(num_pts, num_pts)
 
 
     def get_grid_spec(self):

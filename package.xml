@@ -2,11 +2,12 @@
 <package format="2">
   <name>ergodic_exploration</name>
   <version>0.0.1</version>
-  <description>The ergodic_exploration package</description>
+  <description> Ergodic exploration of unknown environments </description>
   <maintainer email="bostoncleek2020@u.northwestern.edu">bostoncleek</maintainer>
   <license>BSD</license>
 
   <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>nav_msgs</build_depend>
   <build_depend>roscpp</build_depend>
   <build_export_depend>roscpp</build_export_depend>
   <exec_depend>roscpp</exec_depend>
