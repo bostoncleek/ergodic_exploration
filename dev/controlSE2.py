@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.integrate import solve_ivp
 
 from fourier import Basis
 from barrier import Barrier
@@ -22,8 +21,7 @@ class ErgodicControlSE2(object):
 
         self.phik = self.basis.convert_phi2phik(target_dist.grid_vals, target_dist.grid)
 
-
-        self.u_seq = np.zeros((model.action_space_dim,self.N))
+        self.u_seq = np.zeros((model.action_space_dim, self.N))
         # self.u_seq = np.vstack((np.full((1,self.N), 0.1), np.full((1,self.N), 0.0)))
         # self.u_seq = np.random.uniform(0.0, 0.01, size=(model.action_space_dim,self.N))
         # self.u_def = self.u_seq
@@ -64,6 +62,7 @@ class ErgodicControlSE2(object):
 
         ck = np.zeros(self.basis.tot_num_basis)
 
+        # Average ck based on T not N ???
         # add past states to traj for cks
         if self.past_states is not None:
             past_states = self.past_states.copy()
