@@ -29,8 +29,8 @@ class Barrier(object):
         """
         x = np.array([state[0], state[1]])
 
-        if((x > self.explr_space[1]).any() or (x < self.explr_space[0]).any()):
-            print("Out of bounds")
+        # if((x > self.explr_space[1]).any() or (x < self.explr_space[0]).any()):
+        #     print("Out of bounds")
 
         dx = np.zeros(x.shape)
         dx += 2*(x > (self.explr_space[1] - self.eps)) * (x - (self.explr_space[1] - self.eps))
