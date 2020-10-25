@@ -14,12 +14,12 @@ P1 = np.array([[1e3, 0.0, 0.0],
                [0.0, 0.0, 1e3]])
 
 
-# wheel radius
-radius = 0.033
-# wheel base
-wheel_base = 0.16
-# max motor rotational speed
-u_max = 6.0
+# # wheel radius
+# radius = 0.033
+# # wheel base
+# wheel_base = 0.16
+# # max motor rotational speed
+# u_max = 6.0
 
 
 
@@ -37,10 +37,11 @@ def cart(x, u):
         x: (x,y,theta)
         u: u[0] = ul (left wheel velocity), u[1] = ur (right wheel velocity)
     """
-    res = np.array([(radius/2.0)*np.cos(x[2])*(u[0] + u[1]),
-                    (radius/2.0)*np.sin(x[2])*(u[0] + u[1]),
-                    (radius/wheel_base)*(u[1] - u[0])])
-    return res
+    # res = np.array([(radius/2.0)*np.cos(x[2])*(u[0] + u[1]),
+    #                 (radius/2.0)*np.sin(x[2])*(u[0] + u[1]),
+    #                 (radius/wheel_base)*(u[1] - u[0])])
+    # return res
+    return np.array([np.cos(x[2])*u[0], np.sin(x[2])*u[0], u[1]])
 
 
 # def ref_traj(t):
@@ -185,20 +186,20 @@ T = 1.0 # horizon
 N = 10 # number of time steps
 dt = float(T/float(N))
 
-cov = np.array([[0.9, 0.0],
-                 [0.0, 0.9]])
+cov = np.array([[0.1, 0.0],
+                 [0.0, 0.1]])
 
 
 # u0 = np.vstack((np.full((1,N), 3.0), np.full((1,N), 0.8)))
 u0 = np.zeros((2,N))
 
-x0 = np.array([0.0, 0.0, np.pi/2.0])
+x0 = np.array([0.0, 0.0, 0.0])
 
 xT = np.array([1.0, 0.0, np.pi/2.0])
 
 
 
-xvec, u_opt = MPPI(x0, u0, dt, cov, N, K=2, lam=0.01, dthresh=0.01, t_curr=0.0)
+xvec, u_opt = MPPI(x0, u0, dt, cov, N, K=5, lam=0.01, dthresh=0.1, t_curr=0.0)
 print("Final pose:", xvec[:,-1])
 
 

@@ -37,9 +37,7 @@ class ErgodicControlSE2(object):
         self.past_states = None
 
 
-    def controls(self, t_curr, x_curr):
-        x = x_curr
-
+    def controls(self, x):
         # shift controls over
         self.u_seq[:,:-1] = self.u_seq[:,1:]
 

@@ -20,21 +20,46 @@ class ErgodicControlKL(object):
         self.u_seq = np.zeros((model.action_space_dim, self.N))
         # self.u_seq = np.vstack((np.full((1,self.N), 0.1), np.full((1,self.N), 0.0)))
 
-        self.R = np.array([[0.01, 0.0],
-                           [0.0, 0.001]])
+        self.R = np.array([[0.5, 0.0],
+                           [0.0, 0.01]])
 
         self.q = 1.0
 
         self.Rinv = np.linalg.inv(self.R)
 
+        self.eta = np.linalg.det(2.0*np.pi*self.model.sigma)**0.5
+        # print(self.eta)
+
         self.pT = np.zeros(model.state_space_dim)
 
 
     def ergodic_cost_deriv(self, s, ps, x):
+        # Eqn 20
         sum = np.zeros(self.model.state_space_dim)
         for i in range(self.num_samples):
-            sum[self.model.explr_dim]  = sum[self.model.explr_dim] + 2.0 * ps[i] * (s[:,i] - x[self.model.explr_dim]).dot(self.model.sigmaInv)
-        return sum
+            sum[self.model.explr_dim]  +=  2.0 * ps[i] * np.dot(s[:,i] - x[self.model.explr_dim], self.model.sigmaInv)
+        # Not sure about the negaive sign but seems to drive it in the right direction ????
+        return -1. * sum
+
+
+    def ergodic_cost_deriv_long(self, si, xt):
+        # Eqn 10
+        q = 0.0
+        dq = np.zeros(self.model.state_space_dim)
+        for i in range(self.N):
+            x = xt[:,i]
+            q_integrand = np.exp(-0.5 * np.dot(si - x[self.model.explr_dim], self.model.sigmaInv).dot(si - x[self.model.explr_dim]))
+            dq_integrand = q_integrand * np.dot(si - x[self.model.explr_dim], self.model.sigmaInv)
+
+            q  += q_integrand
+            dq[self.model.explr_dim] += dq_integrand
+
+
+        q = (1./(self.N * self.eta)) * q
+        dq = -(1./(self.N * self.eta)) * dq
+
+        return q, dq
+
 
 
     def controls(self, x):
@@ -70,11 +95,19 @@ class ErgodicControlKL(object):
         # plt.show()
 
 
+        edx = np.zeros(self.model.state_space_dim)
+        for i in range(self.num_samples):
+            q, dq = self.ergodic_cost_deriv_long(s[:,i], xt)
+            edx = edx + (ps[i]/q) * dq
+
+        edx = self.q * edx
+        # print(edx)
+
         # backwards pass
         rho = self.pT
         for i in reversed(range(self.N)):
-            edx = np.zeros(self.model.state_space_dim)
-            edx = self.q * self.ergodic_cost_deriv(s, ps, xt[:,i])
+            # edx = np.zeros(self.model.state_space_dim)
+            # edx = self.q * self.ergodic_cost_deriv(s, ps, xt[:,i])
 
             bdx = np.zeros(self.model.state_space_dim)
             bdx[self.model.explr_dim] = dbar[i]
