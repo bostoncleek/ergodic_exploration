@@ -78,13 +78,14 @@ class ErgodicControlSE2(object):
             # Did not add -2*q/N
             edx = np.zeros(self.model.state_space_dim)
             edx[self.model.explr_dim] = self.q * np.dot(fourier_diff, dfk[i])
+            # print(edx)
 
             bdx = np.zeros(self.model.state_space_dim)
             bdx[self.model.explr_dim] = dbar[i]
 
             # ergodic metric is not used to update heading
             # rho = rho - self.dt * (-edx - np.dot(fdx[i].T, rho))
-            rho = rho - self.dt * (-edx - bdx - np.dot(fdx[i].T, rho))
+            rho = rho - self.dt * (-edx -bdx -np.dot(fdx[i].T, rho))
 
             # TRY += here ??? (add Udeff in Eqn 8)
             self.u_seq[:,i] = -np.dot(np.dot(self.Rinv, fdu[i].T), rho)
