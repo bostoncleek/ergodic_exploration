@@ -7,12 +7,6 @@ class Cart(object):
         # state index 0 and 1 -> (x, y) these are the states fro exploring
         self.explr_dim = np.array([0, 1])
 
-        # uncertainty in (x,y) position
-        # self.sigma = np.eye(2)
-        self.sigma = np.eye(2) * 0.01
-
-        self.sigmaInv = np.linalg.inv(self.sigma)
-
     def fdx(self, x, u):
         A =  np.array([
             [ 0., 0., -np.sin(x[2])*u[0]],

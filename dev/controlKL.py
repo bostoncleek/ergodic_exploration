@@ -15,51 +15,55 @@ class ErgodicControlKL(object):
 
         self.barrier = Barrier(explr_space)
 
-        # Kinematic cart the stabilizing policy is all zeros
-        self.mux = np.zeros(model.action_space_dim)
         self.u_seq = np.zeros((model.action_space_dim, self.N))
         # self.u_seq = np.vstack((np.full((1,self.N), 0.1), np.full((1,self.N), 0.0)))
 
-        self.R = np.array([[0.5, 0.0],
-                           [0.0, 0.01]])
+        # self.R = np.array([[0.5, 0.0],
+        #                    [0.0, 0.01]])
+
+        self.R = np.array([[0.01, 0.0],
+                           [0.0, 0.001]])
 
         self.q = 1.0
 
         self.Rinv = np.linalg.inv(self.R)
 
-        self.eta = np.linalg.det(2.0*np.pi*self.model.sigma)**0.5
-        # print(self.eta)
+        # uncertainty in (x,y) position
+        # self.sigma = np.eye(2)
+        self.sigma = np.eye(2) * 0.1
+
+        self.sigmaInv = np.linalg.inv(self.sigma)
+
+        # self.eta = np.linalg.det(2.0*np.pi*self.sigma)**0.5
 
         self.pT = np.zeros(model.state_space_dim)
 
 
     def ergodic_cost_deriv(self, s, ps, x):
-        # Eqn 20
+        # pdot based on eqn 20
         sum = np.zeros(self.model.state_space_dim)
         for i in range(self.num_samples):
-            sum[self.model.explr_dim]  +=  2.0 * ps[i] * np.dot(s[:,i] - x[self.model.explr_dim], self.model.sigmaInv)
+            sum[self.model.explr_dim]  +=  2.0 * ps[i] * np.dot(s[:,i] - x[self.model.explr_dim], self.sigmaInv)
         # Not sure about the negaive sign but seems to drive it in the right direction ????
-        return -1. * sum
+        return -1.*sum
 
 
     def ergodic_cost_deriv_long(self, si, xt):
-        # Eqn 10
+        # pdot based on eqn 10
+        # q based on Eqn 3
         q = 0.0
         dq = np.zeros(self.model.state_space_dim)
         for i in range(self.N):
-            x = xt[:,i]
-            q_integrand = np.exp(-0.5 * np.dot(si - x[self.model.explr_dim], self.model.sigmaInv).dot(si - x[self.model.explr_dim]))
-            dq_integrand = q_integrand * np.dot(si - x[self.model.explr_dim], self.model.sigmaInv)
+            q_integrand = np.exp(-0.5 * np.dot(si - xt[self.model.explr_dim, i], self.sigmaInv).dot(si - xt[self.model.explr_dim, i]))
+            dq_integrand = q_integrand * np.dot(si - xt[self.model.explr_dim, i], self.sigmaInv)
 
-            q  += q_integrand
+            q += q_integrand
             dq[self.model.explr_dim] += dq_integrand
 
+        # q = (1./(self.N * self.eta)) * q
+        # dq = (1./(self.N * self.eta)) * dq
 
-        q = (1./(self.N * self.eta)) * q
-        dq = -(1./(self.N * self.eta)) * dq
-
-        return q, dq
-
+        return q, -1.*dq
 
 
     def controls(self, x):
@@ -86,10 +90,6 @@ class ErgodicControlKL(object):
         s = np.random.uniform(self.explr_space[0], self.explr_space[1], (2, self.num_samples))
         ps = self.target_dist.sample_points(s.T)
 
-        # plt.figure(dpi=110,facecolor='w')
-        # plt.plot(xt[0], xt[1])
-        # plt.show()
-
         # xy, vals = self.target_dist.sample_grid_spec(s.T, ps)
         # plt.contourf(*xy, vals, levels=10)
         # plt.show()
@@ -98,7 +98,7 @@ class ErgodicControlKL(object):
         edx = np.zeros(self.model.state_space_dim)
         for i in range(self.num_samples):
             q, dq = self.ergodic_cost_deriv_long(s[:,i], xt)
-            edx = edx + (ps[i]/q) * dq
+            edx += (ps[i]/q ) * dq
 
         edx = self.q * edx
         # print(edx)
@@ -111,11 +111,10 @@ class ErgodicControlKL(object):
 
             bdx = np.zeros(self.model.state_space_dim)
             bdx[self.model.explr_dim] = dbar[i]
-            # print("edx: ", edx, " bdx: ", bdx)
 
             # ergodic metric is not used to update heading
-            # rho = rho - self.dt * (-edx - np.dot(fdx[i].T, rho))
-            rho = rho - self.dt * (-edx - bdx - np.dot(fdx[i].T, rho))
+            ## SIGN ERROR  on edx ?????
+            rho = rho - self.dt * (edx -bdx -np.dot(fdx[i].T, rho))
 
             self.u_seq[:,i] = -np.dot(np.dot(self.Rinv, fdu[i].T), rho)
 

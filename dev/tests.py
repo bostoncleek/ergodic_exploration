@@ -118,18 +118,23 @@ t_dist = TargetDist(num_pts=50)
 #
 # # erg_ctrl.controls(t_curr, x_curr)
 #
+# plt.figure(dpi=110,facecolor='w')
+# xy, vals = t_dist.get_grid_spec()
+# plt.contourf(*xy, vals, levels=10)
+#
 # while i < N:
-#     u = erg_ctrl.controls(t_curr, x_curr)
+#     u = erg_ctrl.controls(x_curr)
 #     x_curr = model.step(x_curr, u, dt)
 #     trajectory[:,i] = x_curr
 #     t_curr  = t_curr + dt
 #     i = i + 1
+#     plt.scatter(x_curr[0], x_curr[1])
+#     plt.pause(0.01)
 #
-#
-# plt.figure(dpi=110,facecolor='w')
-# xy, vals = t_dist.get_grid_spec()
-# plt.contourf(*xy, vals, levels=10)
-# plt.scatter(trajectory[0], trajectory[1])
+# # plt.figure(dpi=110,facecolor='w')
+# # xy, vals = t_dist.get_grid_spec()
+# # plt.contourf(*xy, vals, levels=10)
+# # plt.scatter(trajectory[0], trajectory[1])
 # plt.show()
 
 # plt.figure(dpi=110,facecolor='w')
@@ -143,7 +148,7 @@ erg_ctrl = ErgodicControlKL(explr_space, model, t_dist, horizon=0.5, num_samples
 # x_curr = np.array([0.1, 0.9, 0.0])
 x_curr = np.array([0.1, 0.0, 0.0])
 t_curr = 0.0
-tf = 15
+tf = 10
 dt = 0.1
 N = int(tf/dt)
 trajectory = np.zeros((model.state_space_dim,N))
@@ -205,6 +210,28 @@ plt.show()
 # # plt.contourf(*xy, vals, levels=10)
 # # plt.scatter(trajectory[0], trajectory[1])
 # plt.show()
+
+#######################################################################
+# grid = np.load('/home/boston/ergodic_exploration_ws/src/ergodic_exploration/data/map.npy')
+# plt.figure(dpi=110,facecolor='w')
+# plt.plot(grid)
+# plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
