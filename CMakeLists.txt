@@ -13,6 +13,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(catkin REQUIRED COMPONENTS
 	nav_msgs
   roscpp
+	rospy
 )
 
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -59,6 +60,7 @@ catkin_package(
  LIBRARIES ${PROJECT_NAME}
  CATKIN_DEPENDS
 	roscpp
+	rospy
 #  DEPENDS
 )
 
@@ -108,10 +110,10 @@ target_link_libraries(mututal_information
 
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
-# catkin_install_python(PROGRAMS
-#   scripts/my_python_script
-#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
+catkin_install_python(PROGRAMS
+  scripts/grid_saver
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
 # Mark executables for installation
 install(TARGETS mututal_information
@@ -143,6 +145,11 @@ install(DIRECTORY launch/ DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
+
+if(CATKIN_ENABLE_TESTING)
+    catkin_add_gtest(${PROJECT_NAME}_test test/test_grid.cpp )
+    target_link_libraries(${PROJECT_NAME}_test ${catkin_Libraries} ${PROJECT_NAME} gtest_main)
+endif()
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
