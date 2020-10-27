@@ -66,6 +66,11 @@ public:
   GridMap(const nav_msgs::OccupancyGrid::ConstPtr& grid_msg);
 
   /**
+   * @brief Constructor a empty grid
+   */
+  GridMap();
+
+  /**
    * @brief Get the grid data
    * @return grid data
    */

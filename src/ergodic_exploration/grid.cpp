@@ -37,6 +37,11 @@ GridMap::GridMap(const nav_msgs::OccupancyGrid::ConstPtr& grid_msg)
 {
 }
 
+GridMap::GridMap()
+  : xsize_(0), ysize_(0), resolution_(0), xmin_(0.0), ymin_(0.0), xmax_(0.0), ymax_(0.0)
+{
+}
+
 const gridData& GridMap::getGridData() const
 {
   return grid_data_;
@@ -128,5 +133,3 @@ int8_t GridMap::getCell(unsigned int idx) const
 }
 
 }  // namespace ergodic_exploration
-
-//
