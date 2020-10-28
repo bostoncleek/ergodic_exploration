@@ -32,19 +32,10 @@ public:
             int8_t occupied_threshold);
 
   /**
-  * @brief Get collision map
-  * @return collision map
-  */
-  const collisionMap& getCollisionMap() const;
-
-  // TODO: move to private after testing
-  /**
-   * @brief Bresenham's circle algorithm
-   * @param [in] <name> <parameter_description>
-   * @return <return_description>
-   * @details Perfroms Bresenham's circle algorithm to determine the obstalce cells
+   * @brief Get collision map
+   * @return collision map
    */
-  void bresenhamCircle(const GridMap& grid, int r, unsigned int cx, unsigned int cy);
+  const collisionMap& getCollisionMap() const;
 
   /**
    * @brief Find occupied cells in grid within the search radius
@@ -56,16 +47,35 @@ public:
 
 private:
   /**
-  * @brief Adds cell to collision map
-  * @param [in] <name> <parameter_description>
-  * @return <return_description>
-  * @details Cell is added if within the boundary of the grid and meets the occupied threshold
+   * @brief Bresenham's circle algorithm
+   * @param grid - grid map
+   * @param r - radius of circle
+   * @param cx - x-coordinate (jth column) center of circle
+   * @param cy - y-coordinate (ith row) center of circle
+   * @details Perfroms Bresenham's circle algorithm to determine the obstalce cells
+   */
+  void bresenhamCircle(const GridMap& grid, int r, unsigned int cx, unsigned int cy);
+
+  /**
+   * @brief Adds cell to collision map
+   * @param grid - grid map
+   * @param i - row in the grid (y-coordinate)
+   * @param j - column in the grid (x-coordinate)
+   * @details Cell is added to collision map if within the boundary of the grid and meets
+   * the occupied threshold
+   */
+  void addObstacleCell(const GridMap& grid, unsigned int i, unsigned int j);
+
+  /**
+  * @brief Compose the coordinates of cells on circle
+  * @param grid - grid map
+  * @param x - x-axis offset from center
+  * @param y - y-axis offset from center
+  * @param cx - x-coordinate (jth column) center of circle
+  * @param cy - y-coordinate (ith row) center of circle
   */
-  void checkCell(const GridMap& grid, unsigned int i, unsigned int j);
-
-  void circleCoordinates(const GridMap& grid, int x, int y, unsigned int cx, unsigned int cy);
-
-
+  void cellCoordinates(const GridMap& grid, unsigned int x, unsigned int y,
+                       unsigned int cx, unsigned int cy);
 
 private:
   double boundary_radius_, search_radius_, obstacle_threshold_;

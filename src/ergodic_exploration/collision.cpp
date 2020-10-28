@@ -31,13 +31,10 @@ Collision::Collision(double boundary_radius, double search_radius,
   }
 }
 
-
 const collisionMap& Collision::getCollisionMap() const
 {
   return collision_map_;
 }
-
-
 
 void Collision::bresenhamCircle(const GridMap& grid, int r, unsigned int cx,
                                 unsigned int cy)
@@ -45,7 +42,7 @@ void Collision::bresenhamCircle(const GridMap& grid, int r, unsigned int cx,
   int x = 0;
   int y = r;
   int d = 3 - 2 * r;
-  circleCoordinates(grid, x, y, cx, cy);
+  cellCoordinates(grid, x, y, cx, cy);
   while (y >= x)
   {
     x++;
@@ -58,7 +55,7 @@ void Collision::bresenhamCircle(const GridMap& grid, int r, unsigned int cx,
     {
       d += 4 * x + 6;
     }
-    circleCoordinates(grid, x, y, cx, cy);
+    cellCoordinates(grid, x, y, cx, cy);
   }
 
   // int x = -r;
@@ -109,45 +106,33 @@ void Collision::obstacleCells(const GridMap& grid, unsigned int cx, unsigned int
   }
 }
 
-void Collision::checkCell(const GridMap& grid, unsigned int i, unsigned int j)
+void Collision::addObstacleCell(const GridMap& grid, unsigned int i, unsigned int j)
 {
-  const auto idx = grid.grid2RowMajor(i, j);
-  if (grid.gridBounds(idx) && !(grid.getCell(idx) < occupied_threshold_))
+  // Signed and unsigned ints were mixed
+  // Check if (i,j) are within the bounds of the grid
+  if (grid.gridBounds(i, j))
   {
-    // Ensures each pair has a unique key
-    collision_map_.emplace(idx, std::make_pair(i, j));
+    // Safe to convert (i,j) to row major index
+    const auto idx = grid.grid2RowMajor(i, j);
+    if (!(grid.getCell(idx) < occupied_threshold_))
+    {
+      collision_map_.emplace(idx, std::make_pair(i, j));
+    }
   }
 }
 
-
-void Collision::circleCoordinates(const GridMap& grid, int x, int y, unsigned int cx, unsigned int cy)
+void Collision::cellCoordinates(const GridMap& grid, unsigned int x, unsigned int y,
+                                unsigned int cx, unsigned int cy)
 {
-  checkCell(grid, cy+y, cx+x);
-  checkCell(grid, cy+y, cx-x);
-  checkCell(grid, cy-y, cx+x);
-  checkCell(grid, cy-y, cx-x);
+  addObstacleCell(grid, cy + y, cx + x);
+  addObstacleCell(grid, cy + y, cx - x);
+  addObstacleCell(grid, cy - y, cx + x);
+  addObstacleCell(grid, cy - y, cx - x);
 
-  checkCell(grid, cy+x, cx+y);
-  checkCell(grid, cy+x, cx-y);
-  checkCell(grid, cy-x, cx+y);
-  checkCell(grid, cy-x, cx-y);
+  addObstacleCell(grid, cy + x, cx + y);
+  addObstacleCell(grid, cy + x, cx - y);
+  addObstacleCell(grid, cy - x, cx + y);
+  addObstacleCell(grid, cy - x, cx - y);
 }
 
-
-
 }  // namespace ergodic_exploration
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//
