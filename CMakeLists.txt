@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.9)
 project(ergodic_exploration)
 
 # add compile options
@@ -11,12 +11,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(catkin REQUIRED COMPONENTS
+	geometry_msgs
 	nav_msgs
   roscpp
 	rospy
 )
 
 # find_package(Boost REQUIRED COMPONENTS system)
+find_package(Armadillo REQUIRED)
 
 
 ## Generate messages in the 'msg' folder
@@ -61,7 +63,7 @@ catkin_package(
  CATKIN_DEPENDS
 	roscpp
 	rospy
-#  DEPENDS
+ # DEPENDS
 )
 
 ###########
@@ -73,18 +75,27 @@ catkin_package(
 include_directories(
 include
   ${catkin_INCLUDE_DIRS}
+	${ARMADILLO_INCLUDE_DIRS}
 )
 
 # Declare a C++ library
 add_library(${PROJECT_NAME}
-  # src/${PROJECT_NAME}/ergodic_exploration.cpp
-	# src/${PROJECT_NAME}/mututal_information.cpp
+	include/${PROJECT_NAME}/cart.hpp
+	src/${PROJECT_NAME}/collision.cpp
 	src/${PROJECT_NAME}/grid.cpp
+	src/${PROJECT_NAME}/integrator.cpp
+	# src/${PROJECT_NAME}/ergodic_exploration.cpp
 )
+
+## Add cmake target dependencies of the library
+# add_dependencies(${PROJECT_NAME}
+# 	${${PROJECT_NAME}_EXPORTED_TARGETS}
+# 	${catkin_EXPORTED_TARGETS}
+# )
 
 
 # Declare a C++ executable
-add_executable(mututal_information src/mutual_information_node.cpp)
+add_executable(exploration src/exploration_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -92,16 +103,19 @@ add_executable(mututal_information src/mutual_information_node.cpp)
 ## e.g. "rosrun someones_pkg node" instead of "rosrun someones_pkg someones_pkg_node"
 # set_target_properties(${PROJECT_NAME}_node PROPERTIES OUTPUT_NAME node PREFIX "")
 
+## Add cmake target dependencies of the executable
+# add_dependencies(exploration ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 # Specify libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
+	${ARMADILLO_LIBRARIES}
 )
 
-
-target_link_libraries(mututal_information
+target_link_libraries(exploration
   ${catkin_LIBRARIES}
 	${PROJECT_NAME}
+	${ARMADILLO_LIBRARIES}
 )
 
 #############
@@ -116,7 +130,7 @@ catkin_install_python(PROGRAMS
 )
 
 # Mark executables for installation
-install(TARGETS mututal_information
+install(TARGETS exploration
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
@@ -147,7 +161,7 @@ install(DIRECTORY launch/ DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 # endif()
 
 if(CATKIN_ENABLE_TESTING)
-    catkin_add_gtest(${PROJECT_NAME}_test test/test_grid.cpp )
+    catkin_add_gtest(${PROJECT_NAME}_test test/test_grid.cpp test/test_integrator.cpp)
     target_link_libraries(${PROJECT_NAME}_test ${catkin_Libraries} ${PROJECT_NAME} gtest_main)
 endif()
 
