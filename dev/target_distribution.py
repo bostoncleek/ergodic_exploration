@@ -20,20 +20,9 @@ class TargetDist(object):
         self.grid_vals = self.__call__(self.grid)
 
 
-    # def spatial_distribution(self, pt):
-    #     mu = np.array([0.5, 0.5])
-    #     sigma = np.eye(2)
-    #     temp = np.dot(np.dot(pt - mu, np.linalg.inv(sigma)), pt - mu)
-    #     return (np.linalg.det(2.0 * np.pi * sigma)**(-0.5)) * np.exp(-0.5 * temp)
-    #
-    # def __call__(self, x):
-    #     val = np.zeros(x.shape[0])
-    #     for i, p in enumerate(x):
-    #         val[i] = self.spatial_distribution(p)
-    #     return val
-
     def sample_points(self, x):
         return self.__call__(x)
+
 
     def sample_grid_spec(self, x, sample_vals):
         xy = []
