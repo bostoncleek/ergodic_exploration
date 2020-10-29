@@ -18,9 +18,7 @@ class ErgodicControlKL(object):
         self.u_seq = np.zeros((model.action_space_dim, self.N))
         # self.u_seq = np.vstack((np.full((1,self.N), 0.1), np.full((1,self.N), 0.0)))
 
-        # self.R = np.array([[0.5, 0.0],
-        #                    [0.0, 0.01]])
-
+        # Penalty on controls
         self.R = np.array([[0.01, 0.0],
                            [0.0, 0.001]])
 
@@ -29,7 +27,6 @@ class ErgodicControlKL(object):
         self.Rinv = np.linalg.inv(self.R)
 
         # uncertainty in (x,y) position
-        # self.sigma = np.eye(2)
         self.sigma = np.eye(2) * 0.1
 
         self.sigmaInv = np.linalg.inv(self.sigma)
@@ -39,16 +36,16 @@ class ErgodicControlKL(object):
         self.pT = np.zeros(model.state_space_dim)
 
 
-    def ergodic_cost_deriv(self, s, ps, x):
-        # pdot based on eqn 20
-        sum = np.zeros(self.model.state_space_dim)
-        for i in range(self.num_samples):
-            sum[self.model.explr_dim]  +=  2.0 * ps[i] * np.dot(s[:,i] - x[self.model.explr_dim], self.sigmaInv)
-        # Not sure about the negaive sign but seems to drive it in the right direction ????
-        return -1.*sum
+    # def ergodic_measure_terms(self, s, ps, x):
+    #     # pdot based on eqn 20
+    #     sum = np.zeros(self.model.state_space_dim)
+    #     for i in range(self.num_samples):
+    #         sum[self.model.explr_dim]  +=  2.0 * ps[i] * np.dot(s[:,i] - x[self.model.explr_dim], self.sigmaInv)
+    #     # Not sure about the negaive sign but seems to drive it in the right direction ????
+    #     return -1.*sum
 
 
-    def ergodic_cost_deriv_long(self, si, xt):
+    def ergodic_measure_terms2(self, si, xt):
         # pdot based on eqn 10
         # q based on Eqn 3
         q = 0.0
@@ -67,7 +64,6 @@ class ErgodicControlKL(object):
 
 
     def controls(self, x):
-
         # shift controls over
         self.u_seq[:,:-1] = self.u_seq[:,1:]
 
@@ -94,11 +90,10 @@ class ErgodicControlKL(object):
         # plt.contourf(*xy, vals, levels=10)
         # plt.show()
 
-
         edx = np.zeros(self.model.state_space_dim)
         for i in range(self.num_samples):
-            q, dq = self.ergodic_cost_deriv_long(s[:,i], xt)
-            edx += (ps[i]/q ) * dq
+            q, dq = self.ergodic_measure_terms2(s[:,i], xt)
+            edx += (ps[i]/q) * dq
 
         edx = self.q * edx
         # print(edx)
@@ -106,13 +101,9 @@ class ErgodicControlKL(object):
         # backwards pass
         rho = self.pT
         for i in reversed(range(self.N)):
-            # edx = np.zeros(self.model.state_space_dim)
-            # edx = self.q * self.ergodic_cost_deriv(s, ps, xt[:,i])
-
             bdx = np.zeros(self.model.state_space_dim)
             bdx[self.model.explr_dim] = dbar[i]
 
-            # ergodic metric is not used to update heading
             ## SIGN ERROR  on edx ?????
             rho = rho - self.dt * (edx -bdx -np.dot(fdx[i].T, rho))
 
@@ -122,5 +113,4 @@ class ErgodicControlKL(object):
                 self.u_seq[:,i] /= np.linalg.norm(self.u_seq[:,i])
 
         # print(self.u_seq)
-
         return self.u_seq[:,0].copy()
