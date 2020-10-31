@@ -17,7 +17,8 @@
 
 namespace ergodic_exploration
 {
-typedef std::vector<int8_t> gridData;
+/** @brief Occupancy grid data */
+typedef std::vector<int8_t> GridData;
 
 /**
  * @brief Length of a grid axis
@@ -26,7 +27,7 @@ typedef std::vector<int8_t> gridData;
  * @param resolution - resolution of grid
  * @return length
  */
-constexpr unsigned int axisLength(double lower, double upper, double resolution)
+constexpr unsigned int axis_length(double lower, double upper, double resolution)
 {
   return static_cast<unsigned int>(std::round((upper - lower) / resolution));
 }
@@ -38,7 +39,7 @@ constexpr unsigned int axisLength(double lower, double upper, double resolution)
  * @param size - length of axis
  * @return axis upper limit
  */
-constexpr double axisUpper(double lower, double resolution, unsigned int size)
+constexpr double axis_upper(double lower, double resolution, unsigned int size)
 {
   return static_cast<double>(resolution * size) + lower;
 }
@@ -57,7 +58,7 @@ public:
    * @param grid_ptr - shared pointer to current grid data
    */
   GridMap(double xmin, double xmax, double ymin, double ymax, double resolution,
-          const gridData& grid_data);
+          const GridData& grid_data);
 
   /**
    * @brief Constructor
@@ -71,10 +72,10 @@ public:
   GridMap();
 
   /**
-   * @brief Get the grid data
-   * @return grid data
+   * @brief Update the grid
+   * @param grid_msg - ROS occupancy grid message
    */
-  const gridData& getGridData() const;
+  void update(const nav_msgs::OccupancyGrid::ConstPtr& grid_msg);
 
   /**
    * @brief Test if coordinates are within the grid
@@ -160,10 +161,40 @@ public:
    */
   int8_t getCell(unsigned int idx) const;
 
+  /**
+   * @brief Get the grid data
+   * @return grid data
+   */
+  const GridData& gridData() const;
+
+  /**
+   * @brief Get grid resolution
+   * @return resolution
+   */
+  const double& resolution() const;
+
+  /**
+   * @brief Get grid x-axis size
+   * @return x-axis size
+   */
+  const unsigned int& xsize() const;
+
+  /**
+   * @brief Get grid y-axis size
+   * @return y-axis size
+   */
+  const unsigned int& ysize() const;
+
+  /**
+   * @brief Get grid size
+   * @return size
+   */
+  unsigned int size() const;
+
 private:
   unsigned int xsize_, ysize_;
   double resolution_, xmin_, ymin_, xmax_, ymax_;
-  gridData grid_data_;
+  GridData grid_data_;
 };
 
 }  // namespace ergodic_exploration
