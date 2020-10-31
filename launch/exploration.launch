@@ -1,0 +1,6 @@
+<launch>
+  <node pkg="ergodic_exploration" type="exploration" name="exploration" output="screen">
+  </node>
+
+  <!-- <node name="rviz" pkg="rviz" type="rviz" required="true" args="-d $(find ergodic_exploration)/config/information.rviz"/> -->
+</launch>

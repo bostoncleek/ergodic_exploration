@@ -1,6 +1,0 @@
-<launch>
-  <node pkg="ergodic_exploration" type="mututal_information" name="mututal_information" output="screen">
-  </node>
-
-  <node name="rviz" pkg="rviz" type="rviz" required="true" args="-d $(find ergodic_exploration)/config/information.rviz"/>
-</launch>
