@@ -81,9 +81,11 @@ include
 # Declare a C++ library
 add_library(${PROJECT_NAME}
 	include/${PROJECT_NAME}/cart.hpp
+	include/${PROJECT_NAME}/integrator.hpp
+	include/${PROJECT_NAME}/omni.hpp
 	src/${PROJECT_NAME}/collision.cpp
 	src/${PROJECT_NAME}/grid.cpp
-	src/${PROJECT_NAME}/integrator.cpp
+	src/${PROJECT_NAME}/numerics.cpp
 	# src/${PROJECT_NAME}/ergodic_exploration.cpp
 )
 
@@ -161,8 +163,18 @@ install(DIRECTORY launch/ DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 # endif()
 
 if(CATKIN_ENABLE_TESTING)
-    catkin_add_gtest(${PROJECT_NAME}_test test/test_grid.cpp test/test_integrator.cpp)
-    target_link_libraries(${PROJECT_NAME}_test ${catkin_Libraries} ${PROJECT_NAME} gtest_main)
+    catkin_add_gtest(${PROJECT_NAME}_test
+			test/test_cart.cpp
+			test/test_grid.cpp
+			test/test_integrator.cpp
+			test/test_omni.cpp
+			)
+    target_link_libraries(${PROJECT_NAME}_test
+			${catkin_Libraries}
+			${ARMADILLO_LIBRARIES}
+			${PROJECT_NAME}
+ 			gtest_main
+			)
 endif()
 
 ## Add folders to be run by python nosetests
