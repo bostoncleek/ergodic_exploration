@@ -15,7 +15,9 @@ TEST(GridTest, Grid2RowMajor)
   const auto ymin = 0.0;
   const auto ymax = 3.0;
   const auto resolution = 1.0;
-  const ergodic_exploration::gridData grid_data;
+  const auto xsize = ergodic_exploration::axis_length(xmin, xmax, resolution);
+  const auto ysize = ergodic_exploration::axis_length(ymin, ymax, resolution);
+  ergodic_exploration::GridData grid_data(xsize * ysize, 0);
 
   ergodic_exploration::GridMap grid_map(xmin, xmax, ymin, ymax, resolution, grid_data);
 
@@ -34,7 +36,9 @@ TEST(GridTest, RowMajor2Grid)
   const auto ymin = 0.0;
   const auto ymax = 3.0;
   const auto resolution = 1.0;
-  const ergodic_exploration::gridData grid_data;
+  const auto xsize = ergodic_exploration::axis_length(xmin, xmax, resolution);
+  const auto ysize = ergodic_exploration::axis_length(ymin, ymax, resolution);
+  ergodic_exploration::GridData grid_data(xsize * ysize, 0);
 
   ergodic_exploration::GridMap grid_map(xmin, xmax, ymin, ymax, resolution, grid_data);
 
@@ -53,7 +57,9 @@ TEST(GridTest, GridBoundsRowMajor)
   const auto ymin = 0.0;
   const auto ymax = 3.0;
   const auto resolution = 1.0;
-  const ergodic_exploration::gridData grid_data;
+  const auto xsize = ergodic_exploration::axis_length(xmin, xmax, resolution);
+  const auto ysize = ergodic_exploration::axis_length(ymin, ymax, resolution);
+  ergodic_exploration::GridData grid_data(xsize * ysize, 0);
 
   ergodic_exploration::GridMap grid_map(xmin, xmax, ymin, ymax, resolution, grid_data);
 
@@ -71,7 +77,9 @@ TEST(GridTest, GridBoundsCoordinates)
   const auto ymin = 0.0;
   const auto ymax = 3.0;
   const auto resolution = 1.0;
-  const ergodic_exploration::gridData grid_data;
+  const auto xsize = ergodic_exploration::axis_length(xmin, xmax, resolution);
+  const auto ysize = ergodic_exploration::axis_length(ymin, ymax, resolution);
+  ergodic_exploration::GridData grid_data(xsize * ysize, 0);
 
   ergodic_exploration::GridMap grid_map(xmin, xmax, ymin, ymax, resolution, grid_data);
 
@@ -91,7 +99,9 @@ TEST(GridTest, Grid2World)
   const auto ymin = 0.0;
   const auto ymax = 1.5;
   const auto resolution = 0.5;
-  const ergodic_exploration::gridData grid_data;
+  const auto xsize = ergodic_exploration::axis_length(xmin, xmax, resolution);
+  const auto ysize = ergodic_exploration::axis_length(ymin, ymax, resolution);
+  ergodic_exploration::GridData grid_data(xsize * ysize, 0);
 
   ergodic_exploration::GridMap grid_map(xmin, xmax, ymin, ymax, resolution, grid_data);
 
@@ -99,13 +109,13 @@ TEST(GridTest, Grid2World)
   const auto j1 = 1;
 
   const auto coords1 = grid_map.grid2World(i1, j1);
-  ASSERT_FLOAT_EQ(coords1.at(0), 0.25);
-  ASSERT_FLOAT_EQ(coords1.at(1), 0.25);
+  ASSERT_DOUBLE_EQ(coords1.at(0), 0.25);
+  ASSERT_DOUBLE_EQ(coords1.at(1), 0.25);
 
   const auto idx2 = 4;
   const auto coords2 = grid_map.grid2World(idx2);
-  ASSERT_FLOAT_EQ(coords2.at(0), -0.25);
-  ASSERT_FLOAT_EQ(coords2.at(1), 1.25);
+  ASSERT_DOUBLE_EQ(coords2.at(0), -0.25);
+  ASSERT_DOUBLE_EQ(coords2.at(1), 1.25);
 }
 
 TEST(GridTest, World2Grid)
@@ -115,7 +125,9 @@ TEST(GridTest, World2Grid)
   const auto ymin = 0.0;
   const auto ymax = 1.5;
   const auto resolution = 0.5;
-  const ergodic_exploration::gridData grid_data;
+  const auto xsize = ergodic_exploration::axis_length(xmin, xmax, resolution);
+  const auto ysize = ergodic_exploration::axis_length(ymin, ymax, resolution);
+  ergodic_exploration::GridData grid_data(xsize * ysize, 0);
 
   ergodic_exploration::GridMap grid_map(xmin, xmax, ymin, ymax, resolution, grid_data);
 
@@ -139,20 +151,22 @@ TEST(GridTest, GetCellValue)
   const auto ymin = 0.0;
   const auto ymax = 1.5;
   const auto resolution = 0.5;
-  ergodic_exploration::gridData grid_data(6, 0);
+  const auto xsize = ergodic_exploration::axis_length(xmin, xmax, resolution);
+  const auto ysize = ergodic_exploration::axis_length(ymin, ymax, resolution);
+  ergodic_exploration::GridData grid_data(xsize * ysize, 0);
 
   grid_data.at(3) = 100;
-  grid_data.at(5) = 90;
+  grid_data.at(4) = 90;
 
   ergodic_exploration::GridMap grid_map(xmin, xmax, ymin, ymax, resolution, grid_data);
 
-  const auto x = 0.25;
+  const auto x = -0.25;
   const auto y = 1.25;
 
   const unsigned int i = 1;
   const unsigned int j = 1;
 
-  ASSERT_EQ(grid_map.getCell(5), 90);
+  ASSERT_EQ(grid_map.getCell(4), 90);
   ASSERT_EQ(grid_map.getCell(x, y), 90);
   ASSERT_EQ(grid_map.getCell(i, j), 100);
 }
