@@ -13,12 +13,12 @@ class Omni(object):
 
 
     def fdx(self, x, u):
-        s_yth = self.r/4.0 * np.sin(x[1]*x[2])
-        c_yth = self.r/4.0 * np.cos(x[1]*x[2])
+        s = self.r/4.0 * np.sin(x[2])
+        c = self.r/4.0 * np.cos(x[2])
 
-        df0dth = u[0]*(-s_yth + c_yth) + u[1]*(-s_yth - c_yth) + u[2]*(-s_yth - c_yth) + u[3]*(-s_yth + c_yth)
+        df0dth = u[0]*(-s + c) + u[1]*(-s - c) + u[2]*(-s - c) + u[3]*(-s + c)
 
-        df1dth = u[0]*(-s_yth - c_yth) + u[1]*(s_yth - c_yth) + u[2]*(s_yth - c_yth) + u[3]*(-s_yth - c_yth)
+        df1dth = u[0]*(-s - c) + u[1]*(s - c) + u[2]*(s - c) + u[3]*(-s - c)
 
         A = np.array([[0.0, 0.0, df0dth],
                       [0.0, 0.0, df1dth],
@@ -28,39 +28,27 @@ class Omni(object):
 
 
     def fdu(self, x):
-        s_yth = self.r/4.0 * np.sin(x[1]*x[2])
-        c_yth = self.r/4.0 * np.cos(x[1]*x[2])
+        s = self.r/4.0 * np.sin(x[2])
+        c = self.r/4.0 * np.cos(x[2])
 
         l = self.r/(4.0 * (self.lx + self.ly))
 
-        B = np.array([[s_yth+c_yth, -s_yth+c_yth, -s_yth+c_yth, s_yth+c_yth],
-                      [-s_yth+c_yth, -s_yth-c_yth, -s_yth-c_yth, -s_yth+c_yth],
-                      [-l,            l,            -l,           l]])
+        B = np.array([[s+c, -s+c, -s+c, s+c],
+                      [-s+c, -s-c, -s-c, -s+c],
+                      [-l,   l,    -l,   l]])
         return B
 
 
     def f(self, x, u):
         xdot = np.zeros(3)
-        s_yth = np.sin(x[1]*x[2])
-        c_yth = np.cos(x[1]*x[2])
+        s = self.r/4.0 * np.sin(x[2])
+        c = self.r/4.0 * np.cos(x[2])
 
-        s_yth_u0 = u[0]*s_yth
-        c_yth_u0 = u[0]*c_yth
+        l = self.r/(4.0 * (self.lx + self.ly))
 
-        s_yth_u1 = u[1]*s_yth
-        c_yth_u1 = u[1]*c_yth
+        xdot[0] = u[0]*(s + c) + u[1]*(-s + c) + u[2]*(-s + c) + u[3]*(s + c)
 
-        s_yth_u2 = u[2]*s_yth
-        c_yth_u2 = u[2]*c_yth
-
-        s_yth_u3 = u[3]*s_yth
-        c_yth_u3 = u[3]*c_yth
-
-        l = 1.0/(self.lx + self.ly)
-
-        xdot[0] = s_yth_u0 + c_yth_u0 - s_yth_u1 + c_yth_u1 - s_yth_u2 + c_yth_u2 + s_yth_u3 + c_yth_u3
-
-        xdot[1] = -s_yth_u0 + c_yth_u0 - s_yth_u1 - c_yth_u1 - s_yth_u2 - c_yth_u2 - s_yth_u3 + c_yth_u3
+        xdot[1] = u[0]*(-s + c) + u[1]*(-s - c) + u[2]*(-s - c) + u[3]*(-s + c)
 
         xdot[2] = -u[0]*l + u[1]*l - u[2]*l + u[3]*l
 
@@ -76,8 +64,16 @@ class Omni(object):
         #
         # return np.dot(Rinv, Hp).dot(u)
 
-        return self.r/4.0 * xdot
+        return xdot
 
     def step(self, x, u, dt):
         x = x + self.f(x, u) * dt
         return x
+
+model = Omni()
+x = np.array([1.0, 2.0, 0.707])
+u = np.array([0.5, 0.4, 0.6, 0.3])
+
+print(model.f(x,u))
+print(model.fdx(x,u))
+print(model.fdu(x))
