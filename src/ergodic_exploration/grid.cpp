@@ -13,9 +13,9 @@
 namespace ergodic_exploration
 {
 GridMap::GridMap(double xmin, double xmax, double ymin, double ymax, double resolution,
-                 const gridData& grid_data)
-  : xsize_(axisLength(xmin, xmax, resolution))
-  , ysize_(axisLength(ymin, ymax, resolution))
+                 const GridData& grid_data)
+  : xsize_(axis_length(xmin, xmax, resolution))
+  , ysize_(axis_length(ymin, ymax, resolution))
   , resolution_(resolution)
   , xmin_(xmin)
   , ymin_(ymin)
@@ -23,6 +23,10 @@ GridMap::GridMap(double xmin, double xmax, double ymin, double ymax, double reso
   , ymax_(ymax)
   , grid_data_(grid_data)
 {
+  if (xsize_ * ysize_ != grid_data_.size())
+  {
+    throw std::invalid_argument("Grid data size does not match the grid size");
+  }
 }
 
 GridMap::GridMap(const nav_msgs::OccupancyGrid::ConstPtr& grid_msg)
@@ -31,10 +35,14 @@ GridMap::GridMap(const nav_msgs::OccupancyGrid::ConstPtr& grid_msg)
   , resolution_(grid_msg->info.resolution)
   , xmin_(grid_msg->info.origin.position.x)
   , ymin_(grid_msg->info.origin.position.y)
-  , xmax_(axisUpper(xmin_, resolution_, xsize_))
-  , ymax_(axisUpper(ymin_, resolution_, ysize_))
+  , xmax_(axis_upper(xmin_, resolution_, xsize_))
+  , ymax_(axis_upper(ymin_, resolution_, ysize_))
   , grid_data_(grid_msg->data)
 {
+  if (xsize_ * ysize_ != grid_data_.size())
+  {
+    throw std::invalid_argument("Grid data size does not match the grid size");
+  }
 }
 
 GridMap::GridMap()
@@ -42,9 +50,16 @@ GridMap::GridMap()
 {
 }
 
-const gridData& GridMap::getGridData() const
+void GridMap::update(const nav_msgs::OccupancyGrid::ConstPtr& grid_msg)
 {
-  return grid_data_;
+  xsize_ = grid_msg->info.width;
+  ysize_ = grid_msg->info.height;
+  resolution_ = grid_msg->info.resolution;
+  xmin_ = grid_msg->info.origin.position.x;
+  ymin_ = grid_msg->info.origin.position.y;
+  xmax_ = axis_upper(xmin_, resolution_, xsize_);
+  ymax_ = axis_upper(ymin_, resolution_, ysize_);
+  grid_data_ = grid_msg->data;
 }
 
 bool GridMap::gridBounds(unsigned int i, unsigned int j) const
@@ -55,12 +70,17 @@ bool GridMap::gridBounds(unsigned int i, unsigned int j) const
 
 bool GridMap::gridBounds(unsigned int idx) const
 {
-  const auto indices = rowMajor2Grid(idx);
-  return ((indices.at(0) <= ysize_ - 1) and (indices.at(1) <= xsize_ - 1)) ? true : false;
+  return (idx <= (xsize_ * ysize_ - 1)) ? true : false;
+  // std::vector<unsigned int> indices = rowMajor2Grid(idx);
+  // return gridBounds(indices.at(0), indices.at(1));
 }
 
 unsigned int GridMap::grid2RowMajor(unsigned int i, unsigned int j) const
 {
+  if (!gridBounds(i, j))
+  {
+    std::cout << "WARNING (grid2RowMajor) i and j NOT within bounds" << std::endl;
+  }
   // ith_row * Ncols + jth_col
   return i * xsize_ + j;
 }
@@ -130,6 +150,31 @@ int8_t GridMap::getCell(unsigned int idx) const
     throw std::invalid_argument("Grid index out of range");
   }
   return grid_data_.at(idx);
+}
+
+const GridData& GridMap::gridData() const
+{
+  return grid_data_;
+}
+
+const double& GridMap::resolution() const
+{
+  return resolution_;
+}
+
+const unsigned int& GridMap::xsize() const
+{
+  return xsize_;
+}
+
+const unsigned int& GridMap::ysize() const
+{
+  return ysize_;
+}
+
+unsigned int GridMap::size() const
+{
+  return xsize_ * ysize_;
 }
 
 }  // namespace ergodic_exploration
