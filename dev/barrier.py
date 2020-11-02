@@ -1,5 +1,6 @@
 import numpy as np
 
+# Penalize trajectories that leave the exploration domain
 class Barrier(object):
     def __init__(self, explr_space, pow=2, weight=100.0):
         self.explr_space = explr_space

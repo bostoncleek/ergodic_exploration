@@ -7,13 +7,18 @@ class TargetDist(object):
         # create 2D grid on domain [0 1] x [0 1]
         grid = np.meshgrid(*[np.linspace(0, 1, num_pts) for _ in range(2)])
         self.grid = np.c_[grid[0].ravel(), grid[1].ravel()]
-        # means and variance of each
+
+        # means and variance of each distirbution
+
+        # 3 distributions
         # self.means = [np.array([0.7, 0.7]), np.array([0.3,0.3]), np.array([0.2,0.8])]
         # self.vars  = [np.array([0.1,0.1])**2, np.array([0.2,0.2])**2, np.array([0.4,0.4])**2]
 
+        # 2 distributions
         self.means = [np.array([0.7, 0.7]), np.array([0.3,0.3])]
         self.vars  = [np.array([0.1,0.1])**2, np.array([0.1,0.1])**2]
 
+        # 1 distribution
         # self.means = [np.array([0.7, 0.7])]
         # self.vars = [np.array([0.1, 0.1])**2]
 
