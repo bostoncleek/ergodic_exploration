@@ -27,13 +27,13 @@ class ErgodicControlSE2(object):
         # self.u_def = self.u_seq
 
 
-        self.R = np.array([[0.01, 0.0],
-                           [0.0, 0.001]])
+        self.R = np.array([[0.5, 0.0],
+                           [0.0, 0.01]])
 
         # self.R = np.eye(4)*0.01
 
         self.Rinv = np.linalg.inv(self.R)
-        self.q = 10.0
+        self.q = 100.0
 
         self.pT = np.zeros(model.state_space_dim)
 
