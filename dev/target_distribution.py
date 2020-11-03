@@ -28,7 +28,6 @@ class TargetDist(object):
     def sample_points(self, x):
         return self.__call__(x)
 
-
     def sample_grid_spec(self, x, sample_vals):
         xy = []
         num_pts = int(np.sqrt(sample_vals.shape))

@@ -5,8 +5,10 @@ import scipy
 from target_distribution import TargetDist
 from controlSE2 import ErgodicControlSE2
 from controlKL import ErgodicControlKL
+from controlKLIVP import ErgodicControlKLIVP
 from barrier import Barrier
 from cart import Cart
+from omni import Omni
 
 # [xmin = ymin], [xmax = ymax]
 explr_space = np.array([0.0, 1.0])
@@ -16,22 +18,27 @@ explr_space = np.array([0.0, 1.0])
 t_dist = TargetDist(num_pts=50)
 
 # 2D Kinematic cart
-model = Cart()
+# model = Cart()
+model = Omni()
 
 # This produces the desired output
 # erg_ctrl = ErgodicControlSE2(explr_space, model, t_dist, horizon=0.5, num_basis=5)
 
 # This does not work as expected
-erg_ctrl = ErgodicControlKL(explr_space, model, t_dist, horizon=0.5, num_samples=10**2)
+erg_ctrl = ErgodicControlKL(explr_space, model, t_dist, horizon=0.5, num_samples=10**2, buffer_size=50)
+
+# erg_ctrl = ErgodicControlKLIVP(explr_space, model, t_dist, horizon=0.5, num_samples=10**2, buffer_size=50)
 
 
-x_curr = np.array([0.0, 0.0, 0.0])
+x_curr = np.array([0.5, 0.5, 0.0])
 t_curr = 0.0
-tf = 10
+tf = 50
 dt = 0.1
 N = int(tf/dt)
 trajectory = np.zeros((3,N))
 i = 0
+
+# erg_ctrl.controls(x_curr)
 
 plt.figure(dpi=110,facecolor='w')
 xy, vals = t_dist.get_grid_spec()

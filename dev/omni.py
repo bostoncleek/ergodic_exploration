@@ -7,7 +7,7 @@ class Omni(object):
         # state index 0 and 1 -> (x, y) these are the states fro exploring
         self.explr_dim = np.array([0, 1])
 
-        self.r = 0.1
+        self.r = 0.2
         self.lx = 0.5
         self.ly = 0.5
 

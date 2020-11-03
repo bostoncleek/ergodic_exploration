@@ -19,6 +19,7 @@ class ErgodicControlSE2(object):
         self.lambdak = self.basis.lambdak
         # self.lambdak = np.exp(-0.8*np.linalg.norm(self.basis.k, axis=1))
 
+        # self.phik = None
         self.phik = self.basis.convert_phi2phik(target_dist.grid_vals, target_dist.grid)
 
         self.u_seq = np.zeros((model.action_space_dim, self.N))
@@ -26,9 +27,10 @@ class ErgodicControlSE2(object):
         # self.u_seq = np.random.uniform(0.0, 0.01, size=(model.action_space_dim,self.N))
         # self.u_def = self.u_seq
 
+        # self.R = np.array([[0.5, 0.0],
+        #                    [0.0, 0.01]])
+        self.R = np.eye(4) * 0.01
 
-        self.R = np.array([[0.5, 0.0],
-                           [0.0, 0.01]])
 
         # self.R = np.eye(4)*0.01
 

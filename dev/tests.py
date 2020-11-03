@@ -11,6 +11,7 @@ from controlKL import ErgodicControlKL
 from controlMPPIKL import ErgodicControlMPPIKL
 from barrier import Barrier
 from cart import Cart
+from omni import Omni
 
 # [xmin = ymin], [xmax = ymax]
 explr_space = np.array([0.0, 1.0])
@@ -67,32 +68,32 @@ t_dist = TargetDist(num_pts=50)
 
 
 #######################################################################
-# model = SingleIntegrator()
-# erg_ctrl = ErgodicControl(explr_space, model, t_dist, horizon=0.5, num_basis=5)
-#
-# x_curr = np.array([0.5, 1.2])
-# t_curr = 0.0
-# tf = 10
-# dt = 0.1
-# N = int(tf/dt)
-# trajectory = np.zeros((2,N))
-# i = 0
-#
-# # erg_ctrl.controls(t_curr, x_curr)
-#
-# while i < N:
-#     u = erg_ctrl.controls(t_curr, x_curr)
-#     x_curr = model.step(x_curr, u, dt)
-#     trajectory[:,i] = x_curr
-#     t_curr  = t_curr + dt
-#     i = i + 1
-#
-#
-# plt.figure(dpi=110,facecolor='w')
-# xy, vals = t_dist.get_grid_spec()
-# plt.contourf(*xy, vals, levels=10)
-# plt.scatter(trajectory[0], trajectory[1])
-# plt.show()
+model = SingleIntegrator()
+erg_ctrl = ErgodicControl(explr_space, model, t_dist, horizon=0.5, num_basis=5)
+
+x_curr = np.array([0.5, 0.5])
+t_curr = 0.0
+tf = 10
+dt = 0.1
+N = int(tf/dt)
+trajectory = np.zeros((2,N))
+i = 0
+
+# erg_ctrl.controls(t_curr, x_curr)
+
+while i < N:
+    u = erg_ctrl.controls(t_curr, x_curr)
+    x_curr = model.step(x_curr, u, dt)
+    trajectory[:,i] = x_curr
+    t_curr  = t_curr + dt
+    i = i + 1
+
+
+plt.figure(dpi=110,facecolor='w')
+xy, vals = t_dist.get_grid_spec()
+plt.contourf(*xy, vals, levels=10)
+plt.scatter(trajectory[0], trajectory[1])
+plt.show()
 
 # convert trajectory to distibution
 # ck = erg_ctrl.basis.convert_traj2ck(trajectory)
@@ -104,13 +105,15 @@ t_dist = TargetDist(num_pts=50)
 
 #######################################################################
 # model = Cart()
+# # model = Omni()
+#
 # # model = SingleIntegrator()
 # erg_ctrl = ErgodicControlSE2(explr_space, model, t_dist, horizon=0.5, num_basis=5)
 #
 # # x_curr = np.array([0.5, 1.2, np.pi/6])
-# x_curr = np.array([0.0, 0.0, 0.0])
+# x_curr = np.array([0.2, 0.5, 0.0])
 # t_curr = 0.0
-# tf = 20
+# tf = 10
 # dt = 0.1
 # N = int(tf/dt)
 # trajectory = np.zeros((3,N))
@@ -138,43 +141,44 @@ t_dist = TargetDist(num_pts=50)
 # plt.show()
 
 # plt.figure(dpi=110,facecolor='w')
-# plt.plot(trajectory[2])
+# # plt.plot(trajectory[2])
+# plt.plot(trajectory[0], trajectory[1])
 # plt.show()
 
 #######################################################################
-model = Cart()
-erg_ctrl = ErgodicControlKL(explr_space, model, t_dist, horizon=0.5, num_samples=10**2)
-
-# x_curr = np.array([0.1, 0.9, 0.0])
-x_curr = np.array([0.1, 0.0, 0.0])
-t_curr = 0.0
-tf = 10
-dt = 0.1
-N = int(tf/dt)
-trajectory = np.zeros((model.state_space_dim,N))
-i = 0
-
-# erg_ctrl.controls(x_curr)
-
-plt.figure(dpi=110,facecolor='w')
-xy, vals = t_dist.get_grid_spec()
-plt.contourf(*xy, vals, levels=10)
-
-while i < N:
-    u = erg_ctrl.controls(x_curr)
-    x_curr = model.step(x_curr, u, dt)
-    trajectory[:,i] = x_curr
-    t_curr  = t_curr + dt
-    i = i + 1
-    plt.scatter(x_curr[0], x_curr[1])
-    plt.pause(0.01)
-
-
+# model = Cart()
+# erg_ctrl = ErgodicControlKL(explr_space, model, t_dist, horizon=0.5, num_samples=10**2)
+#
+# # x_curr = np.array([0.1, 0.9, 0.0])
+# x_curr = np.array([0.1, 0.0, 0.0])
+# t_curr = 0.0
+# tf = 10
+# dt = 0.1
+# N = int(tf/dt)
+# trajectory = np.zeros((model.state_space_dim,N))
+# i = 0
+#
+# # erg_ctrl.controls(x_curr)
+#
 # plt.figure(dpi=110,facecolor='w')
 # xy, vals = t_dist.get_grid_spec()
 # plt.contourf(*xy, vals, levels=10)
-# plt.scatter(trajectory[0], trajectory[1])
-plt.show()
+#
+# while i < N:
+#     u = erg_ctrl.controls(x_curr)
+#     x_curr = model.step(x_curr, u, dt)
+#     trajectory[:,i] = x_curr
+#     t_curr  = t_curr + dt
+#     i = i + 1
+#     plt.scatter(x_curr[0], x_curr[1])
+#     plt.pause(0.01)
+#
+#
+# # plt.figure(dpi=110,facecolor='w')
+# # xy, vals = t_dist.get_grid_spec()
+# # plt.contourf(*xy, vals, levels=10)
+# # plt.scatter(trajectory[0], trajectory[1])
+# plt.show()
 
 #######################################################################
 # model = Cart()
@@ -218,17 +222,40 @@ plt.show()
 # plt.show()
 
 
+#######################################################################
+# model = Omni()
+#
+# u = np.array([1.0, -1.0, -1.0, 1.0])
+# # u = np.array([0.5, 0.4, 0.6, 0.3])
+#
+#
+# x_curr = np.array([0.0, 0.0, 0.0])
+# t_curr = 0.0
+# tf = 5
+# dt = 0.1
+# N = int(tf/dt)
+# trajectory = np.zeros((model.state_space_dim,N))
+# i = 0
+#
+# # x_curr = model.step(x_curr, u, dt)
+#
+#
+# plt.figure(dpi=110,facecolor='w')
+# plt.xlim([-1, 1])
+# plt.ylim([-1, 1])
+#
+# while i < N:
+#     x_curr = model.step(x_curr, u, dt)
+#     trajectory[:,i] = x_curr
+#     i = i + 1
+#     plt.scatter(x_curr[0], x_curr[1])
+#     plt.pause(0.01)
+#
+# plt.show()
 
-
-
-
-
-
-
-
-
-
-
+# plt.figure(dpi=110,facecolor='w')
+# plt.plot(trajectory[2])
+# plt.show()
 
 
 

@@ -64,8 +64,8 @@ class ErgodicControl(object):
         for i in range(self.N):
             xt[:,i] = x
             dfk.append(self.basis.dfk(x))
-            fdx.append(self.model.fdx())
-            fdu.append(self.model.fdu())
+            fdx.append(self.model.fdx(x, self.u_seq[:,i]))
+            fdu.append(self.model.fdu(x))
             dbar.append(self.barrier.dx(x))
             x = self.model.step(x, self.u_seq[:,i], self.dt)
 
