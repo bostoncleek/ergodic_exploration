@@ -22,7 +22,7 @@ model = Cart()
 # erg_ctrl = ErgodicControlSE2(explr_space, model, t_dist, horizon=0.5, num_basis=5)
 
 # This does not work as expected
-# erg_ctrl = ErgodicControlKL(explr_space, model, t_dist, horizon=0.5, num_samples=10**2)
+erg_ctrl = ErgodicControlKL(explr_space, model, t_dist, horizon=0.5, num_samples=10**2)
 
 
 x_curr = np.array([0.0, 0.0, 0.0])

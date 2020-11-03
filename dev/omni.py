@@ -52,6 +52,7 @@ class Omni(object):
 
         xdot[2] = -u[0]*l + u[1]*l - u[2]*l + u[3]*l
 
+        # # This model is based on kevin lynches book
         # Rinv = np.array([[np.cos(x[2]),  np.sin(x[2]), 0.0],
         #                  [-np.sin(x[2]), np.cos(x[2]), 0.0],
         #                  [0.0,           0.0,          1.0]])
@@ -59,8 +60,8 @@ class Omni(object):
         # var = 1.0/(self.lx + self.ly)
         #
         # Hp = (self.r/4.0) * np.array([[1.0,  1.0,  1.0, 1.0],
-        #                               [1.0, -1.0, -1.0, 1.0],
-        #                               [-var, var, -var, var]])
+        #                               [-1.0, 1.0, -1.0, 1.0],
+        #                               [-var, var, var, -var]])
         #
         # return np.dot(Rinv, Hp).dot(u)
 
@@ -70,10 +71,10 @@ class Omni(object):
         x = x + self.f(x, u) * dt
         return x
 
-model = Omni()
-x = np.array([1.0, 2.0, 0.707])
-u = np.array([0.5, 0.4, 0.6, 0.3])
-
-print(model.f(x,u))
-print(model.fdx(x,u))
-print(model.fdu(x))
+# model = Omni()
+# x = np.array([1.0, 2.0, 0.707])
+# u = np.array([0.5, 0.4, 0.6, 0.3])
+#
+# print(model.f(x,u))
+# print(model.fdx(x,u))
+# print(model.fdu(x))
