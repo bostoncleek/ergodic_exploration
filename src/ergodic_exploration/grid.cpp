@@ -157,17 +157,17 @@ const GridData& GridMap::gridData() const
   return grid_data_;
 }
 
-const double& GridMap::resolution() const
+double GridMap::resolution() const
 {
   return resolution_;
 }
 
-const unsigned int& GridMap::xsize() const
+unsigned int GridMap::xsize() const
 {
   return xsize_;
 }
 
-const unsigned int& GridMap::ysize() const
+unsigned int GridMap::ysize() const
 {
   return ysize_;
 }

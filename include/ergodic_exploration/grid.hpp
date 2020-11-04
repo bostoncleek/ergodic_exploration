@@ -171,19 +171,19 @@ public:
    * @brief Get grid resolution
    * @return resolution
    */
-  const double& resolution() const;
+  double resolution() const;
 
   /**
    * @brief Get grid x-axis size
    * @return x-axis size
    */
-  const unsigned int& xsize() const;
+  unsigned int xsize() const;
 
   /**
    * @brief Get grid y-axis size
    * @return y-axis size
    */
-  const unsigned int& ysize() const;
+  unsigned int ysize() const;
 
   /**
    * @brief Get grid size
