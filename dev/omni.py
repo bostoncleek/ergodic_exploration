@@ -16,9 +16,9 @@ class Omni(object):
         s = self.r/4.0 * np.sin(x[2])
         c = self.r/4.0 * np.cos(x[2])
 
-        df0dth = u[0]*(-s + c) + u[1]*(-s - c) + u[2]*(-s - c) + u[3]*(-s + c)
+        df0dth = u[0]*(-s + c) + u[1]*(-s - c) + u[2]*(-s + c) + u[3]*(-s - c)
 
-        df1dth = u[0]*(-s - c) + u[1]*(s - c) + u[2]*(s - c) + u[3]*(-s - c)
+        df1dth = u[0]*(s + c) + u[1]*(-s + c) + u[2]*(s + c) + u[3]*(-s + c)
 
         A = np.array([[0.0, 0.0, df0dth],
                       [0.0, 0.0, df1dth],
@@ -33,9 +33,9 @@ class Omni(object):
 
         l = self.r/(4.0 * (self.lx + self.ly))
 
-        B = np.array([[s+c, -s+c, -s+c, s+c],
-                      [-s+c, -s-c, -s-c, -s+c],
-                      [-l,   l,    -l,   l]])
+        B = np.array([[s+c, -s+c, s+c, -s+c],
+                      [s-c, s+c, s-c, s+c],
+                      [-l,   l,    l,   -l]])
         return B
 
 
@@ -46,11 +46,11 @@ class Omni(object):
 
         l = self.r/(4.0 * (self.lx + self.ly))
 
-        xdot[0] = u[0]*(s + c) + u[1]*(-s + c) + u[2]*(-s + c) + u[3]*(s + c)
+        xdot[0] = u[0]*(s + c) + u[1]*(-s + c) + u[2]*(s + c) + u[3]*(-s + c)
 
-        xdot[1] = u[0]*(-s + c) + u[1]*(-s - c) + u[2]*(-s - c) + u[3]*(-s + c)
+        xdot[1] = u[0]*(s - c) + u[1]*(s + c) + u[2]*(s - c) + u[3]*(s + c)
 
-        xdot[2] = -u[0]*l + u[1]*l - u[2]*l + u[3]*l
+        xdot[2] = -u[0]*l + u[1]*l + u[2]*l - u[3]*l
 
         # # This model is based on kevin lynches book
         # Rinv = np.array([[np.cos(x[2]),  np.sin(x[2]), 0.0],

@@ -138,6 +138,11 @@ class ErgodicControlKL(object):
         # plt.contourf(*xy, vals, levels=10)
         # plt.show()
 
+        # plt.figure(dpi=110,facecolor='w')
+        # plt.plot(xt[0], xt[1])
+        # plt.show()
+
+
         q = np.zeros(self.num_samples)
         for j in range(self.num_samples):
             q[j] = self.traj_stat(s[:,j], total_traj)
