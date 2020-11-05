@@ -10,7 +10,7 @@
 #include <cmath>
 #include <armadillo>
 
-#include <ergodic_exploration/numerics.hpp>
+#include <ergodic_exploration/types.hpp>
 
 namespace ergodic_exploration
 {
@@ -20,8 +20,8 @@ using arma::vec;
 /**
  * @brief Kinematic model of 4 mecanum wheel robot
  * @details The state is [x, y, theta] and controls are the angular velocities of each
- * wheel [u0, u1, u2, u3] correspodning to (front left, front right, rear left, rear
- * right). Assumes the mecanum wheel rollers are at +/- 45 degrees
+ * wheel [u0, u1, u2, u3] corresponding to (front left, front right, rear right, rear
+ * left). Assumes the mecanum wheel rollers are at +/- 45 degrees
  */
 struct Mecanum
 {
@@ -39,14 +39,14 @@ struct Mecanum
   /**
    * @brief Convert wheel velocities to a body frame twist
    * @param u - control [u0, u1, u2, u3] (column vector)
-   * @return twist in body frame
+   * @return twist in body frame Vb = [vx, vy, w]
    */
   Twist2D wheels2Twist(const vec u) const
   {
     const auto l = 1.0 / (wheel_base_x + wheel_base_y);
 
     // pseudo inverse of jacobian matrix
-    const mat Hp = { { 1.0, 1.0, 1.0, 1.0 }, { 1.0, -1.0, -1.0, 1.0 }, { -l, l, -l, l } };
+    const mat Hp = { { 1.0, 1.0, 1.0, 1.0 }, { -1.0, 1.0, -1.0, 1.0 }, { -l, l, l, -l } };
 
     const vec v = (wheel_radius / 4.0) * Hp * u;
 
@@ -66,9 +66,9 @@ struct Mecanum
     const auto c = (wheel_radius / 4.0) * std::cos(x(2));
     const auto l = wheel_radius / (4.0 * (wheel_base_x + wheel_base_y));
 
-    xdot(0) = u(0) * (s + c) + u(1) * (-s + c) + u(2) * (-s + c) + u(3) * (s + c);
-    xdot(1) = u(0) * (-s + c) + u(1) * (-s - c) + u(2) * (-s - c) + u(3) * (-s + c);
-    xdot(2) = -u(0) * l + u(1) * l - u(2) * l + u(3) * l;
+    xdot(0) = u(0) * (s + c) + u(1) * (-s + c) + u(2) * (s + c) + u(3) * (-s + c);
+    xdot(1) = u(0) * (s - c) + u(1) * (s + c) + u(2) * (s - c) + u(3) * (s + c);
+    xdot(2) = -u(0) * l + u(1) * l + u(2) * l - u(3) * l;
 
     return xdot;
   }
@@ -87,9 +87,9 @@ struct Mecanum
     const auto c = (wheel_radius / 4.0) * std::cos(x(2));
 
     const auto df0dth =
-        u(0) * (-s + c) + u(1) * (-s - c) + u(2) * (-s - c) + u(3) * (-s + c);
+        u(0) * (-s + c) + u(1) * (-s - c) + u(2) * (-s + c) + u(3) * (-s - c);
     const auto df1dth =
-        u(0) * (-s - c) + u(1) * (s - c) + u(2) * (s - c) + u(3) * (-s - c);
+        u(0) * (s + c) + u(1) * (-s + c) + u(2) * (s + c) + u(3) * (-s + c);
 
     A(0, 2) = df0dth;
     A(1, 2) = df1dth;
@@ -104,14 +104,13 @@ struct Mecanum
    */
   mat fdu(const vec x) const
   {
-    // mat B(3, 4, arma::fill::zeros);
     const auto s = (wheel_radius / 4.0) * std::sin(x(2));
     const auto c = (wheel_radius / 4.0) * std::cos(x(2));
     const auto l = wheel_radius / (4.0 * (wheel_base_x + wheel_base_y));
 
-    const mat B = { { s + c, -s + c, -s + c, s + c },
-                    { -s + c, -s - c, -s - c, -s + c },
-                    { -l, l, -l, l } };
+    const mat B = { { s + c, -s + c, s + c, -s + c },
+                    { s - c, s + c, s - c, s + c },
+                    { -l, l, l, -l } };
     return B;
   }
 

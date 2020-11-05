@@ -20,9 +20,9 @@ TEST(OmniTest, MecanumKinematics)
   const arma::vec u = { 0.5, 0.4, 0.6, 0.3 };
   const arma::vec xdot = mecanum(x, u);
 
-  ASSERT_NEAR(xdot(0), 0.030966, 1e-6);
-  ASSERT_NEAR(xdot(1), -0.033031, 1e-6);
-  ASSERT_NEAR(xdot(2), -0.01, 1e-6);
+  ASSERT_NEAR(xdot(0), 0.040709, 1e-6);
+  ASSERT_NEAR(xdot(1), 0.021626, 1e-6);
+  ASSERT_NEAR(xdot(2), 0.005, 1e-6);
 }
 
 TEST(OmniTest, MecanumJacobianState)
@@ -37,8 +37,8 @@ TEST(OmniTest, MecanumJacobianState)
   const arma::vec u = { 0.5, 0.4, 0.6, 0.3 };
   const arma::mat A = mecanum.fdx(x, u);
 
-  ASSERT_NEAR(A(0, 2), -0.033031, 1e-6);
-  ASSERT_NEAR(A(1, 2), -0.030966, 1e-6);
+  ASSERT_NEAR(A(0, 2), -0.021626, 1e-6);
+  ASSERT_NEAR(A(1, 2), 0.040709, 1e-6);
 }
 
 TEST(OmniTest, MecanumJacobianControl)
@@ -55,16 +55,16 @@ TEST(OmniTest, MecanumJacobianControl)
 
   ASSERT_NEAR(B(0, 0), 0.035246, 1e-6);
   ASSERT_NEAR(B(0, 1), 0.002768, 1e-6);
-  ASSERT_NEAR(B(0, 2), 0.002768, 1e-6);
-  ASSERT_NEAR(B(0, 3), 0.035246, 1e-6);
+  ASSERT_NEAR(B(0, 2), 0.035246, 1e-6);
+  ASSERT_NEAR(B(0, 3), 0.002768, 1e-6);
 
-  ASSERT_NEAR(B(1, 0), 0.002768, 1e-6);
-  ASSERT_NEAR(B(1, 1), -0.035246, 1e-6);
-  ASSERT_NEAR(B(1, 2), -0.035246, 1e-6);
-  ASSERT_NEAR(B(1, 3), 0.002768, 1e-6);
+  ASSERT_NEAR(B(1, 0), -0.002768, 1e-6);
+  ASSERT_NEAR(B(1, 1), 0.035246, 1e-6);
+  ASSERT_NEAR(B(1, 2), -0.002768, 1e-6);
+  ASSERT_NEAR(B(1, 3), 0.035246, 1e-6);
 
   ASSERT_NEAR(B(2, 0), -0.025, 1e-6);
   ASSERT_NEAR(B(2, 1), 0.025, 1e-6);
-  ASSERT_NEAR(B(2, 2), -0.025, 1e-6);
-  ASSERT_NEAR(B(2, 3), 0.025, 1e-6);
+  ASSERT_NEAR(B(2, 2), 0.025, 1e-6);
+  ASSERT_NEAR(B(2, 3), -0.025, 1e-6);
 }
