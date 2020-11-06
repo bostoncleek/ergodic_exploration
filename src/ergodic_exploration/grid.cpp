@@ -133,48 +133,23 @@ unsigned int GridMap::world2RowMajor(double x, double y) const
   return grid2RowMajor(indices.at(0), indices.at(1));
 }
 
-int8_t GridMap::getCell(double x, double y) const
+double GridMap::getCell(double x, double y) const
 {
   return getCell(world2RowMajor(x, y));
 }
 
-int8_t GridMap::getCell(unsigned int i, unsigned int j) const
+double GridMap::getCell(unsigned int i, unsigned int j) const
 {
   return getCell(grid2RowMajor(i, j));
 }
 
-int8_t GridMap::getCell(unsigned int idx) const
+double GridMap::getCell(unsigned int idx) const
 {
   if (!gridBounds(idx))
   {
     throw std::invalid_argument("Grid index out of range");
   }
-  return grid_data_.at(idx);
-}
-
-const GridData& GridMap::gridData() const
-{
-  return grid_data_;
-}
-
-double GridMap::resolution() const
-{
-  return resolution_;
-}
-
-unsigned int GridMap::xsize() const
-{
-  return xsize_;
-}
-
-unsigned int GridMap::ysize() const
-{
-  return ysize_;
-}
-
-unsigned int GridMap::size() const
-{
-  return xsize_ * ysize_;
+  return static_cast<double>(grid_data_.at(idx) / 100.0);
 }
 
 }  // namespace ergodic_exploration

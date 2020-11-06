@@ -144,7 +144,7 @@ public:
    * @param y - position in world (ith row)
    * @return value of the cell
    */
-  int8_t getCell(double x, double y) const;
+  double getCell(double x, double y) const;
 
   /**
    * @brief Get the value of the cell at a specified index
@@ -152,44 +152,87 @@ public:
    * @param j - column in the grid (x-coordinate)
    * @return value of the cell
    */
-  int8_t getCell(unsigned int i, unsigned int j) const;
+  double getCell(unsigned int i, unsigned int j) const;
 
   /**
    * @brief Get the value of the cell at a specified index
    * @param idx - row major index
    * @return value of the cell
    */
-  int8_t getCell(unsigned int idx) const;
+  double getCell(unsigned int idx) const;
 
   /**
-   * @brief Get the grid data
-   * @return grid data
+   * @brief Return the grid data
    */
-  const GridData& gridData() const;
+  const GridData& gridData() const
+  {
+    return grid_data_;
+  }
 
   /**
-   * @brief Get grid resolution
+   * @brief Return grid resolution
    * @return resolution
    */
-  double resolution() const;
+  double resolution() const
+  {
+    return resolution_;
+  }
 
   /**
-   * @brief Get grid x-axis size
-   * @return x-axis size
+   * @brief Return grid xmin
    */
-  unsigned int xsize() const;
+  double xmin() const
+  {
+    return xmin_;
+  }
 
   /**
-   * @brief Get grid y-axis size
-   * @return y-axis size
+   * @brief Return grid ymin
    */
-  unsigned int ysize() const;
+  double ymin() const
+  {
+    return ymin_;
+  }
 
   /**
-   * @brief Get grid size
-   * @return size
+   * @brief Return grid xmax
    */
-  unsigned int size() const;
+  double xmax() const
+  {
+    return xmax_;
+  }
+
+  /**
+   * @brief Return grid ymax
+   */
+  double ymax() const
+  {
+    return ymax_;
+  }
+
+  /**
+   * @brief Return grid x-axis size
+   */
+  unsigned int xsize() const
+  {
+    return xsize_;
+  }
+
+  /**
+   * @brief Return y-axis size
+   */
+  unsigned int ysize() const
+  {
+    return ysize_;
+  }
+
+  /**
+   * @brief Return grid size
+   */
+  unsigned int size() const
+  {
+    return xsize_ * ysize_;
+  }
 
 private:
   unsigned int xsize_, ysize_;
