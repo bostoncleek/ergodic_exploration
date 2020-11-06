@@ -9,13 +9,14 @@
 
 #include <unordered_map>
 #include <utility>
+
 #include <ergodic_exploration/grid.hpp>
 
 namespace ergodic_exploration
 {
 /** @brief Map obstacle cell index to grid coordinates */
 typedef std::unordered_map<unsigned int, std::pair<unsigned int, unsigned int>>
-    collisionMap;
+    CollisionMap;
 
 /** @brief 2D collision detection */
 class Collision
@@ -35,7 +36,7 @@ public:
    * @brief Get collision map
    * @return collision map
    */
-  const collisionMap& getCollisionMap() const;
+  const CollisionMap& collisionMap() const;
 
   /**
    * @brief Find occupied cells in grid within the search radius
@@ -67,13 +68,13 @@ private:
   void addObstacleCell(const GridMap& grid, unsigned int i, unsigned int j);
 
   /**
-  * @brief Compose the coordinates of cells on circle
-  * @param grid - grid map
-  * @param x - x-axis offset from center
-  * @param y - y-axis offset from center
-  * @param cx - x-coordinate (jth column) center of circle
-  * @param cy - y-coordinate (ith row) center of circle
-  */
+   * @brief Compose the coordinates of cells on circle
+   * @param grid - grid map
+   * @param x - x-axis offset from center
+   * @param y - y-axis offset from center
+   * @param cx - x-coordinate (jth column) center of circle
+   * @param cy - y-coordinate (ith row) center of circle
+   */
   void cellCoordinates(const GridMap& grid, unsigned int x, unsigned int y,
                        unsigned int cx, unsigned int cy);
 
@@ -81,7 +82,7 @@ private:
   double boundary_radius_, search_radius_, obstacle_threshold_;
   int8_t occupied_threshold_;
   // TODO: pass this in as a parameter to obstacleCells() ??
-  collisionMap collision_map_;
+  CollisionMap collision_map_;
 };
 
 }  // namespace ergodic_exploration
