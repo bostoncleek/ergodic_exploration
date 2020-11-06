@@ -81,11 +81,14 @@ include
 # Declare a C++ library
 add_library(${PROJECT_NAME}
 	include/${PROJECT_NAME}/cart.hpp
+	include/${PROJECT_NAME}/control.hpp
+	include/${PROJECT_NAME}/ergodic_control.hpp
 	include/${PROJECT_NAME}/integrator.hpp
 	include/${PROJECT_NAME}/omni.hpp
 	src/${PROJECT_NAME}/collision.cpp
 	src/${PROJECT_NAME}/grid.cpp
 	src/${PROJECT_NAME}/numerics.cpp
+	src/${PROJECT_NAME}/types.cpp
 	# src/${PROJECT_NAME}/ergodic_exploration.cpp
 )
 
