@@ -32,7 +32,11 @@ struct Mecanum
    * @param wheel_base_y - distance from chassis center to wheel center along y-axis
    */
   Mecanum(double wheel_radius, double wheel_base_x, double wheel_base_y)
-    : wheel_radius(wheel_radius), wheel_base_x(wheel_base_x), wheel_base_y(wheel_base_y)
+    : wheel_radius(wheel_radius)
+    , wheel_base_x(wheel_base_x)
+    , wheel_base_y(wheel_base_y)
+    , action_space_(4)
+    , state_space_(3)
   {
   }
 
@@ -117,6 +121,8 @@ struct Mecanum
   double wheel_radius;  // radius of wheel
   double wheel_base_x;  // distance from chassis center to wheel center along x-axis
   double wheel_base_y;  // distance from chassis center to wheel center along y-axis
+  unsigned int action_space_;  // control space dimension
+  unsigned int state_space_;   // states space dimension
 };
 
 }  // namespace ergodic_exploration
