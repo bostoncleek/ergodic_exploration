@@ -10,6 +10,8 @@
 #include <cmath>
 #include <armadillo>
 
+#include <ergodic_exploration/types.hpp>
+
 namespace ergodic_exploration
 {
 using arma::mat;
@@ -17,7 +19,8 @@ using arma::vec;
 
 /**
  * @brief Kinematic model of 2 wheel differential drive robot
- * @details The state is [x, y, theta] and controls are the velocities of each wheel [uL, uR]
+ * @details The state is [x, y, theta] and controls are the velocities of each wheel [u0,
+ * u1] corresponding to the left and right wheels
  */
 struct Cart
 {
@@ -28,8 +31,21 @@ struct Cart
    * center of a wheel
    */
   Cart(double wheel_radius, double wheel_base)
-    : wheel_radius(wheel_radius), wheel_base(wheel_base)
+    : wheel_radius(wheel_radius), wheel_base(wheel_base), action_space_(2), state_space_(3)
   {
+  }
+
+  /**
+   * @brief Convert wheel velocities to a body frame twist
+   * @param u - control [u0, u1] (column vector)
+   * @return twist in body frame Vb = [vx, vy, w]
+   */
+  Twist2D wheels2Twist(const vec u) const
+  {
+    const double vx = wheel_radius / 2.0 * (u(0) + u(1));
+    const double w = wheel_radius / (2.0 * wheel_base) * (u(1) - u(0));
+
+    return { vx, 0.0, w };
   }
 
   /**
@@ -88,8 +104,10 @@ struct Cart
     return (wheel_radius / 2.0) * B;
   }
 
-  double wheel_radius;  // radius of wheel
-  double wheel_base;    // distance from robot center to wheel center
+  double wheel_radius;         // radius of wheel
+  double wheel_base;           // distance from robot center to wheel center
+  unsigned int action_space_;  // control space dimension
+  unsigned int state_space_;   // states space dimension
 };
 
 /**
