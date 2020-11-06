@@ -31,7 +31,7 @@ Collision::Collision(double boundary_radius, double search_radius,
   }
 }
 
-const collisionMap& Collision::getCollisionMap() const
+const CollisionMap& Collision::collisionMap() const
 {
   return collision_map_;
 }
