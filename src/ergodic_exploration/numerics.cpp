@@ -9,9 +9,17 @@
 
 namespace ergodic_exploration
 {
-// bool almost_equal(double d1, double d2, double epsilon = 1.0e-12)
-// {
-//   return std::fabs(d1 - d2) < epsilon ? true : false;
-// }
+std::mt19937_64& get_twister()
+{
+  static std::random_device rd;
+  static std::mt19937_64 gen(rd());
+  return gen;
+}
+
+double sampleUniformDistribution(double min, double max)
+{
+  std::uniform_real_distribution<double> dis(min, max);
+  return dis(get_twister());
+}
 
 }  // namespace ergodic_exploration
