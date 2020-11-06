@@ -116,6 +116,11 @@ struct Cart
  */
 struct SimpleCart
 {
+  /** @brief Constructor */
+  SimpleCart() : action_space_(2), state_space_(3)
+  {
+  }
+
   /**
    * @brief Kinematic model of a 2 wheel differential drive robot
    * @param x - state [x, y, theta] (column vector)
@@ -156,5 +161,8 @@ struct SimpleCart
 
     return B;
   }
+
+  unsigned int action_space_;  // control space dimension
+  unsigned int state_space_;   // states space dimension
 };
 }  // namespace ergodic_exploration
