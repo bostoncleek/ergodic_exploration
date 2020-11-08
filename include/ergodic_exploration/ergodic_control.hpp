@@ -278,8 +278,9 @@ void ErgodicControl<ModelT>::sample(const GridMap& grid)
   for (unsigned int i = 0; i < num_samples_; i++)
   {
     // Probability of occupancy [0 1] and -1 for unknown
-    // p_(i) = entropy(grid.getCell(s_(0, i), s_(1, i)));
-    p_(i) = grid.getCell(s_(0, i), s_(1, i));
+    p_(i) = entropy(grid.getCell(s_(0, i), s_(1, i)));
+    // p_(i) = grid.getCell(s_(0, i), s_(1, i));
+    // std::cout << "p_i: " << p_(i) << std::endl;
   }
 
   // Normalize the sampled values
@@ -303,8 +304,13 @@ void ErgodicControl<ModelT>::trajStat(const mat& xt)
       // std::cout << std::exp(-0.5 * dot(diff.t() * Sigmainv_, diff)) << std::endl;
     }
 
-    // TODO: add 1e-8 is this is 0 ??
-    q_(i) = qval;  // + 1e-8;
+    if (almost_equal(0.0, qval))
+    {
+      // std::cout << "WARNING: trajectory statistics are zero" << std::endl;
+      qval = 1e-8;
+    }
+
+    q_(i) = qval;
   }
 
   // Normalize the trajectory statistics
@@ -312,6 +318,7 @@ void ErgodicControl<ModelT>::trajStat(const mat& xt)
   if (!almost_equal(0.0, sum))
   {
     q_ /= sum;
+    // std::cout << "sum q: " << sum << std::endl;
   }
 }
 
@@ -328,8 +335,6 @@ void ErgodicControl<ModelT>::ergMeasDeriv(const mat& xt)
       kldx.rows(0, 1) += (p_(j) / q_(j)) * qval * (Sigmainv_ * diff);
     }
 
-    // TODO: add 1e-8 is this is 0 ??
-    // kldx.rows(0, 1) += 1e-8;
     edx_.col(i) = kldx;
   }
 }
@@ -346,8 +351,8 @@ void ErgodicControl<ModelT>::updateControl(const mat& xt, const mat& rhot)
     // TODO: apply filter to control signal (savgol filter)
 
     // ut_(0, i) = std::clamp(ut_(0, i), -0.1, 0.1);
-    // ut_(1, i) = std::clamp(ut_(1, i), -0.1, 0.1);
-    // ut_(2, i) = std::clamp(ut_(2, i), -0.5, 0.5);
+    // // ut_(1, i) = std::clamp(ut_(1, i), -0.1, 0.1);
+    // ut_(1, i) = std::clamp(ut_(1, i), -0.5, 0.5);
 
     // ut_(0,i) = std::clamp(ut_(0,i), -1.0, 1.0);
     // ut_(1,i) = std::clamp(ut_(1,i), -1.0, 1.0);
