@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
 	nav_msgs
   roscpp
 	rospy
+	tf2
 )
 
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -101,6 +102,7 @@ add_library(${PROJECT_NAME}
 
 # Declare a C++ executable
 add_executable(exploration src/exploration_node.cpp)
+add_executable(test_node src/test_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -123,6 +125,12 @@ target_link_libraries(exploration
 	${ARMADILLO_LIBRARIES}
 )
 
+target_link_libraries(test_node
+  ${catkin_LIBRARIES}
+	${PROJECT_NAME}
+	${ARMADILLO_LIBRARIES}
+)
+
 #############
 ## Install ##
 #############
@@ -135,7 +143,7 @@ catkin_install_python(PROGRAMS
 )
 
 # Mark executables for installation
-install(TARGETS exploration
+install(TARGETS exploration test_node
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
