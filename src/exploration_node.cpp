@@ -60,13 +60,11 @@ static bool received;
 //   }
 // }
 
-
 void mapCallback(const nav_msgs::OccupancyGrid::ConstPtr& msg)
 {
   grid_map.update(msg);
   received = true;
 }
-
 
 int main(int argc, char** argv)
 {
@@ -163,7 +161,6 @@ int main(int argc, char** argv)
 
       tf2::Quaternion quat;
       quat.setRPY(0.0, 0.0, x(2));
-
 
       geometry_msgs::PoseStamped pose;
       pose.header.frame_id = "map";
