@@ -114,7 +114,7 @@ void Collision::addObstacleCell(const GridMap& grid, unsigned int i, unsigned in
   {
     // Safe to convert (i,j) to row major index
     const auto idx = grid.grid2RowMajor(i, j);
-    if (!(grid.getCell(idx) < occupied_threshold_))
+    if (!(grid.getCell(idx) < occupied_threshold_) && !collision_map_.contains(idx))
     {
       collision_map_.emplace(idx, std::make_pair(i, j));
     }
