@@ -86,6 +86,7 @@ add_library(${PROJECT_NAME}
 	include/${PROJECT_NAME}/ergodic_control.hpp
 	include/${PROJECT_NAME}/integrator.hpp
 	include/${PROJECT_NAME}/omni.hpp
+	src/${PROJECT_NAME}/buffer.cpp
 	src/${PROJECT_NAME}/collision.cpp
 	src/${PROJECT_NAME}/grid.cpp
 	src/${PROJECT_NAME}/numerics.cpp
@@ -137,10 +138,10 @@ target_link_libraries(test_node
 
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
-catkin_install_python(PROGRAMS
-  scripts/grid_saver
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
+# catkin_install_python(PROGRAMS
+#   scripts/grid_saver
+#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+# )
 
 # Mark executables for installation
 install(TARGETS exploration test_node
