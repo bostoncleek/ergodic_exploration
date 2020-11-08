@@ -71,6 +71,7 @@ public:
    * @param edx - derivatve of the ergodic measure for each state in xt
    * @param horizon - length of trajectory in time
    * @return evolution of the co-state variable backwards in time
+   * @details co-state is sorted from [t0 tf] no need to index in backwards
    */
   template <class ModelT>
   mat solve(const CoStateFunc& func, const ModelT& model, const vec& rhoT, const mat& xt,
@@ -127,14 +128,15 @@ template <class ModelT>
 mat RungeKutta::solve(const CoStateFunc& func, const ModelT& model, const vec& rhoT,
                       const mat& xt, const mat& ut, const mat& edx, double horizon)
 {
-  // TODO: update the control signal while solving rho
-
   vec rho = rhoT;
   const auto steps = static_cast<unsigned int>(horizon / std::abs(dt_));
   mat rhot(rho.n_rows, steps);
 
-  for (unsigned int i = 0; i < steps; i++)
+  // Iterate backwards
+  // this way rhot from t0 to tf in the returned matrix
+  for (unsigned int i = steps; i-- > 0;)
   {
+    // Index states, controls, and ergodic measures at end of array
     rho = step(func, rho, edx.col(i), model.fdx(xt.col(i), ut.col(i)));
     rhot.col(i) = rho;
   }
