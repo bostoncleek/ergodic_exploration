@@ -12,7 +12,7 @@
 
 namespace ergodic_exploration
 {
-// TODO: why gcc cant fine numbers
+// TODO: why gcc cant find numbers
 constexpr double PI = 3.14159265358979323846;
 
 /**
@@ -38,7 +38,7 @@ inline double normalize_angle_PI(double rad)
   const auto q = std::floor((rad + PI) / (2.0 * PI));
   rad = (rad + PI) - q * 2.0 * PI;
 
-  if (rad < 0)
+  if (rad < 0.0)
   {
     rad += 2.0 * PI;
   }
@@ -57,7 +57,7 @@ inline double normalize_angle_2PI(double rad)
   const auto q = std::floor(rad / (2.0 * PI));
   rad = (rad)-q * 2.0 * PI;
 
-  if (rad < 0)
+  if (rad < 0.0)
   {
     rad += 2.0 * PI;
   }
