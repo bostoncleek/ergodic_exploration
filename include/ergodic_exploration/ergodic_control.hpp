@@ -9,18 +9,15 @@
 
 #include <cmath>
 #include <stdexcept>
-#include <unordered_map>
 #include <algorithm>
 
+#include <ergodic_exploration/buffer.hpp>
 #include <ergodic_exploration/grid.hpp>
 #include <ergodic_exploration/numerics.hpp>
 #include <ergodic_exploration/integrator.hpp>
 
 namespace ergodic_exploration
 {
-using arma::distr_param;
-using arma::ivec;
-using arma::randi;
 using arma::span;
 
 // TODO: check base 2 or e ???
@@ -52,107 +49,25 @@ inline vec rhodot(const vec& rho, const vec& kldx, const mat& fdx)
   return kldx - fdx.t() * rho;
 }
 
-/** @brief Store and smaple past states */
-class ReplayBuffer
-{
-public:
-  ReplayBuffer(unsigned int buffer_size, unsigned int batch_size)
-    : buffer_size_(buffer_size), batch_size_(batch_size)
-  {
-    // num_ = 0;
-  }
-
-  void append(const vec& x)
-  {
-    if (memory_.size() < buffer_size_)
-    {
-      memory_.emplace(memory_.size(), x);
-      return;
-    }
-    std::cout << "WARNING: Memory Buffer is full" << std::endl;
-
-    // if (num_ < batch_size_)
-    // {
-    //   prev_states_.insert_cols(num_, x);
-    //   num_++;
-    //   return;
-    // }
-    //
-    // prev_states_.cols(0, num_ - 2) = prev_states_.cols(1, num_ - 1);
-    // prev_states_.col(num_ - 1) = x;
-  }
-
-  void sampleMemory(mat& xt_total, const mat& xt)
-  {
-    // if (num_ == 0)
-    // {
-    //   xt_total = xt;
-    //   return;
-    // }
-    //
-    // const auto num_states = xt.n_cols + num_;
-    // xt_total.resize(xt.n_rows, num_states);
-    //
-    // xt_total.cols(0, num_ - 1) = prev_states_;
-    // xt_total.cols(num_, num_states - 1) = xt;
-
-    if (memory_.empty())
-    {
-      xt_total = xt;
-    }
-
-    // Concatenate the current store states with predicted trajectory
-    else if (memory_.size() <= batch_size_)
-    {
-      const auto num_stored = memory_.size();
-      const auto num_states = xt.n_cols + num_stored;
-      xt_total.resize(xt.n_rows, num_states);
-
-      for (unsigned int i = 0; i < num_stored; i++)
-      {
-        // Index is the key
-        xt_total.col(i) = memory_.at(i);
-      }
-
-      // Copy predicted trajectory to end
-      xt_total.cols(num_stored, num_states - 1) = xt;
-    }
-
-    // Randomly sample memory and concatenate with predicted trajectory
-    else
-    {
-      const auto num_states = xt.n_cols + batch_size_;
-      xt_total.resize(xt.n_rows, num_states);
-
-      // random ints on interval [a b]
-      const ivec rand_ints = randi<ivec>(batch_size_, distr_param(0, memory_.size() - 1));
-
-      for (unsigned int i = 0; i < batch_size_; i++)
-      {
-        // Index is the key
-        xt_total.col(i) = memory_.at(rand_ints(i));
-      }
-
-      // Copy predicted trajectory to end
-      xt_total.cols(batch_size_, num_states - 1) = xt;
-    }
-  }
-
-private:
-  // mat prev_states_;
-  // unsigned int num_;
-  unsigned int buffer_size_;                      // total number of past states in memory
-  unsigned int batch_size_;                       // number of states sampled from memory
-  std::unordered_map<unsigned int, vec> memory_;  // past states
-};
-
-/** @brief Receeding horizon ergodic trajectory optimization */
+/** @brief Receding horizon ergodic trajectory optimization */
 template <class ModelT>
 class ErgodicControl
 {
 public:
+  /**
+   * @brief Constructor
+   * @param model - robot's dynamic model
+   * @param dt - time step in integration
+   * @param horizon - control horizon
+   * @param num_samples - samples drawn from map
+   * @param buffer_size - past states in memory
+   * @param batch_size - states sampled from memory
+   * @param R - positive definite matrix that penalizes controls
+   * @param Sigma - uncertainty in robot's (x,y) position
+   */
   ErgodicControl(const ModelT& model, double dt, double horizon, unsigned int num_samples,
-                 unsigned int buffer_size, unsigned int batch_size, mat R, mat Sigma);
+                 unsigned int buffer_size, unsigned int batch_size, const mat& R,
+                 const mat& Sigma);
 
   /**
    * @brief Update the control signal
@@ -162,37 +77,58 @@ public:
   vec control(const GridMap& grid, const vec& x);
 
 private:
+  /**
+   * @brief Samples map
+   * @param grid - occupancy map
+   */
   void sample(const GridMap& grid);
 
+  /**
+   * @brief Compose time averaged trajectory statistics
+   * @param xt - trajectory
+   * @details xt contains the predicted trajectory + sampled states from memory
+   */
   void trajStat(const mat& xt);
 
+  /**
+   * @brief Compose the derivative of the ergodic measure
+   * @param xt - predicted trajectory
+   * @details Updates a matrix containing ergodic measure derivatve for each state in xt
+   */
   void ergMeasDeriv(const mat& xt);
 
+  /**
+   * @brief Update the control signal
+   * @param xt - predicted trajectory
+   * @param rhot - co-state variable solution
+   * @details rhot is assumed to already be sorted from [t0 tf] with t0 at index 0
+   */
   void updateControl(const mat& xt, const mat& rhot);
 
 private:
-  ModelT model_;
-  double dt_;
-  double horizon_;
-  unsigned int num_samples_;
-  unsigned int steps_;
-  mat Rinv_;
-  mat Sigmainv_;
-  mat ut_;
-  mat s_;
-  mat edx_;
-  vec rhoT_;
-  vec p_;
-  vec q_;
-  RungeKutta rk4_;
-  ReplayBuffer buffer_;
-  CoStateFunc rhodot_;
+  ModelT model_;              // robot's dynamic model
+  double dt_;                 // time step in integration
+  double horizon_;            // control horizon
+  unsigned int num_samples_;  // number of samples drawn from map
+  unsigned int steps_;        // number of steps used in integration
+  mat Rinv_;                  // inverse of the control weight matrix
+  mat Sigmainv_;              // inverse of the robot's (x,y) position uncertainty
+  mat ut_;                    // control signal
+  mat s_;                     // pair of (x,y) points sampled from map
+  mat edx_;                   // ergodic measure derivatives
+  vec rhoT_;                  // co-state terminal condition
+  vec p_;                     // occupancy map entropy vector
+  vec q_;                     // trajectory statistics vector
+  RungeKutta rk4_;            // integrator
+  ReplayBuffer buffer_;       // store past states
+  CoStateFunc rhodot_;        // co-state function
 };
 
 template <class ModelT>
 ErgodicControl<ModelT>::ErgodicControl(const ModelT& model, double dt, double horizon,
                                        unsigned int num_samples, unsigned int buffer_size,
-                                       unsigned int batch_size, mat R, mat Sigma)
+                                       unsigned int batch_size, const mat& R,
+                                       const mat& Sigma)
   : model_(model)
   , dt_(dt)
   , horizon_(horizon)
@@ -230,7 +166,8 @@ vec ErgodicControl<ModelT>::control(const GridMap& grid, const vec& x)
   ut_.col(ut_.n_cols - 1).fill(0.0);
 
   // Forward simulation
-  const mat xt = rk4_.solve(model_, x, ut_, horizon_);
+  mat xt;
+  rk4_.solve(xt, model_, x, ut_, horizon_);
   // xt.print("xt:");
 
   // Sample (x,y) space
@@ -250,7 +187,8 @@ vec ErgodicControl<ModelT>::control(const GridMap& grid, const vec& x)
   // edx_.print("edx:");
 
   // Backwards pass
-  const mat rhot = rk4_.solve(rhodot_, model_, rhoT_, xt, ut_, edx_, horizon_);
+  mat rhot;
+  rk4_.solve(rhot, rhodot_, model_, rhoT_, xt, ut_, edx_, horizon_);
   // rhot.print("rho:");
 
   // Update controls
