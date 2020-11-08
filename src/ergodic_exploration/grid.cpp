@@ -149,7 +149,7 @@ double GridMap::getCell(unsigned int idx) const
   {
     throw std::invalid_argument("Grid index out of range");
   }
-  return static_cast<double>(grid_data_.at(idx))/100.0;
+  return static_cast<double>(grid_data_.at(idx)) / 100.0;
 }
 
 }  // namespace ergodic_exploration
