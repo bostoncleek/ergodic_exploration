@@ -1,6 +1,13 @@
 <launch>
-  <node pkg="ergodic_exploration" type="exploration" name="exploration" output="screen">
+
+  <arg name="test" default="0"/>
+
+  <node unless="$(arg test)" pkg="ergodic_exploration" type="exploration" name="exploration" output="screen">
   </node>
 
-  <!-- <node name="rviz" pkg="rviz" type="rviz" required="true" args="-d $(find ergodic_exploration)/config/information.rviz"/> -->
+  <node if="$(arg test)" pkg="ergodic_exploration" type="test_node" name="test_node" output="screen">
+  </node>
+
+  <node unless="$(arg test)" name="rviz" pkg="rviz" type="rviz"
+    required="true" args="-d $(find ergodic_exploration)/config/explore.rviz"/>
 </launch>
