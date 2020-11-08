@@ -13,7 +13,7 @@
 namespace ergodic_exploration
 {
 Collision::Collision(double boundary_radius, double search_radius,
-                     double obstacle_threshold, int8_t occupied_threshold)
+                     double obstacle_threshold, double occupied_threshold)
   : boundary_radius_(boundary_radius)
   , search_radius_(search_radius)
   , obstacle_threshold_(obstacle_threshold)
@@ -114,7 +114,7 @@ void Collision::addObstacleCell(const GridMap& grid, unsigned int i, unsigned in
   {
     // Safe to convert (i,j) to row major index
     const auto idx = grid.grid2RowMajor(i, j);
-    if (!(grid.getCell(idx) < occupied_threshold_) && !collision_map_.contains(idx))
+    if (!(grid.getCell(idx) < occupied_threshold_) /*&& !collision_map_.contains(idx)*/)
     {
       collision_map_.emplace(idx, std::make_pair(i, j));
     }

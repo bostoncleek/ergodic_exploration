@@ -27,10 +27,10 @@ public:
    * @param boundary_radius - collision boundary around robot represented as a circle
    * @param search_radius - radius outside of collision boundary to search for obstacles
    * @param obstacle_threshold - min distance to obstacle to be considered a collision
-   * @param occupied_threshold - min probaility [0 100] for a cell to be considered an obstacle
+   * @param occupied_threshold - min probaility [0 1] for a cell to be considered an obstacle
    */
   Collision(double boundary_radius, double search_radius, double obstacle_threshold,
-            int8_t occupied_threshold);
+            double occupied_threshold);
 
   /**
    * @brief Get collision map
@@ -80,7 +80,7 @@ private:
 
 private:
   double boundary_radius_, search_radius_, obstacle_threshold_;
-  int8_t occupied_threshold_;
+  double occupied_threshold_;
   // TODO: pass this in as a parameter to obstacleCells() ??
   CollisionMap collision_map_;
 };
