@@ -31,13 +31,13 @@ struct Cart
    * center of a wheel
    */
   Cart(double wheel_radius, double wheel_base)
-    : wheel_radius(wheel_radius), wheel_base(wheel_base), action_space_(2), state_space_(3)
+    : wheel_radius(wheel_radius), wheel_base(wheel_base), action_space(2), state_space(3)
   {
   }
 
   /**
    * @brief Convert wheel velocities to a body frame twist
-   * @param u - control [u0, u1] (column vector)
+   * @param u - control [u0, u1]
    * @return twist in body frame Vb = [vx, vy, w]
    */
   Twist2D wheels2Twist(const vec u) const
@@ -50,9 +50,9 @@ struct Cart
 
   /**
    * @brief Kinematic model of a 2 wheel differential drive robot
-   * @param x - state [x, y, theta] (column vector)
-   * @param u - control [uL, uR] (column vector)
-   * @return [xdot, ydot, thetadot] = f(x,u) (column vector)
+   * @param x - state [x, y, theta]
+   * @param u - control [uL, uR]
+   * @return [xdot, ydot, thetadot] = f(x,u)
    */
   vec operator()(const vec x, const vec u) const
   {
@@ -66,8 +66,8 @@ struct Cart
 
   /**
    * @brief Jacobian of the model with respect to the state
-   * @param x - state [x, y, theta] (column vector)
-   * @param u - control [uL, uR] (column vector)
+   * @param x - state [x, y, theta]
+   * @param u - control [uL, uR]
    * @return A = D1(f(x,u)) of shape (3x3)
    */
   mat fdx(const vec x, const vec u) const
@@ -85,7 +85,7 @@ struct Cart
 
   /**
    * @brief Jacobian of the model with respect to the control
-   * @param x - state [x, y, theta] (column vector)
+   * @param x - state [x, y, theta]
    * @return B = D2(f(x,u)) of shape (3x2)
    */
   mat fdu(const vec x) const
@@ -104,27 +104,28 @@ struct Cart
     return (wheel_radius / 2.0) * B;
   }
 
-  double wheel_radius;         // radius of wheel
-  double wheel_base;           // distance from robot center to wheel center
-  unsigned int action_space_;  // control space dimension
-  unsigned int state_space_;   // states space dimension
+  double wheel_radius;        // radius of wheel
+  double wheel_base;          // distance from robot center to wheel center
+  unsigned int action_space;  // control space dimension
+  unsigned int state_space;   // states space dimension
 };
 
 /**
  * @brief Kinematic model of 2 wheel differential drive robot
- * @details The state is [x, y, theta] and controls are the linear and angular velocities [v, w]
+ * @details The state is [x, y, theta] and controls are the linear and
+ * angular velocities [v, w] (body twist)
  */
 struct SimpleCart
 {
   /** @brief Constructor */
-  SimpleCart() : action_space_(2), state_space_(3)
+  SimpleCart() : action_space(2), state_space(3)
   {
   }
 
   /**
    * @brief Kinematic model of a 2 wheel differential drive robot
-   * @param x - state [x, y, theta] (column vector)
-   * @param u - control [v, w] (column vector)
+   * @param x - state [x, y, theta]
+   * @param u - control [v, w]
    * @return xdot = f(x,u)
    */
   vec operator()(const vec x, const vec u) const
@@ -134,8 +135,8 @@ struct SimpleCart
 
   /**
    * @brief Jacobian of the model with respect to the state
-   * @param x - state [x, y, theta] (column vector)
-   * @param u - control [v, w](column vector)
+   * @param x - state [x, y, theta]
+   * @param u - control [v, w]
    * @return A = D1(f(x,u)) of shape (3x3)
    */
   mat fdx(const vec x, const vec u) const
@@ -148,7 +149,7 @@ struct SimpleCart
 
   /**
    * @brief Jacobian of the model with respect to the control
-   * @param x - state [x, y, theta] (column vector)
+   * @param x - state [x, y, theta]
    * @return B = D2(f(x,u)) of shape (3x2)
    */
   mat fdu(const vec x) const
@@ -162,7 +163,7 @@ struct SimpleCart
     return B;
   }
 
-  unsigned int action_space_;  // control space dimension
-  unsigned int state_space_;   // states space dimension
+  unsigned int action_space;  // control space dimension
+  unsigned int state_space;   // states space dimension
 };
 }  // namespace ergodic_exploration
