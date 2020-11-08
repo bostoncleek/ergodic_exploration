@@ -27,7 +27,7 @@ typedef std::vector<int8_t> GridData;
  * @param resolution - resolution of grid
  * @return length
  */
-constexpr unsigned int axis_length(double lower, double upper, double resolution)
+inline unsigned int axis_length(double lower, double upper, double resolution)
 {
   return static_cast<unsigned int>(std::round((upper - lower) / resolution));
 }
@@ -39,7 +39,7 @@ constexpr unsigned int axis_length(double lower, double upper, double resolution
  * @param size - length of axis
  * @return axis upper limit
  */
-constexpr double axis_upper(double lower, double resolution, unsigned int size)
+inline double axis_upper(double lower, double resolution, unsigned int size)
 {
   return static_cast<double>(resolution * size) + lower;
 }
