@@ -8,10 +8,16 @@
 #pragma once
 
 #include <cmath>
+#include <cmath>
 // #include <numbers>
+
+#include <armadillo>
 
 namespace ergodic_exploration
 {
+using arma::mat;
+using arma::vec;
+
 // TODO: why gcc cant find numbers
 constexpr double PI = 3.14159265358979323846;
 
@@ -25,6 +31,78 @@ constexpr double PI = 3.14159265358979323846;
 inline bool almost_equal(double d1, double d2, double epsilon = 1.0e-12)
 {
   return std::fabs(d1 - d2) < epsilon ? true : false;
+}
+
+/**
+ * @brief Convert polar to cartesian coordinates
+ * @param angle - angle in radians
+ * @param range - range measurement
+ */
+inline vec polar2Cartesian(double angle, double range)
+{
+  const auto x = range * std::cos(angle);
+  const auto y = range * std::sin(angle);
+  return { x, y };
+}
+
+/**
+ * @brief Convert polar to cartesian coordinates
+ * @param angle - angle in radians
+ * @param range - range measurement
+ */
+inline vec polar2CartesianHomo(double angle, double range)
+{
+  const auto x = range * std::cos(angle);
+  const auto y = range * std::sin(angle);
+  return { x, y, 1.0 };
+}
+
+/**
+ * @brief Construct 2D transformation matrix
+ * @param x - x position
+ * @param y - y position
+ * @param angle - yaw in radians
+ * @details 2D transformation
+ */
+inline mat transform2d(double x, double y, double angle)
+{
+  const mat trans2d = { { std::cos(angle), -std::sin(angle), x },
+                        { std::sin(angle), std::cos(angle), y },
+                        { 0.0, 0.0, 1.0 } };
+
+  return trans2d;
+}
+
+/**
+ * @brief Construct 2D transformation
+ * @param angle - yaw in radians
+ * @details 2D transformation
+ */
+inline mat transform2d(double angle)
+{
+  const mat trans2d = { { std::cos(angle), -std::sin(angle), 0.0 },
+                        { std::sin(angle), std::cos(angle), 0.0 },
+                        { 0.0, 0.0, 1.0 } };
+  return trans2d;
+}
+
+/**
+ * @brief Construct 2D transformation inverse
+ * @param trans2d - 2D transformation
+ * @details 2D transformation inverse
+ */
+inline mat transform2dInv(const mat& trans2d)
+{
+  // R^T flip sign in sin
+  const auto stheta = -trans2d(1, 0);
+  const auto ctheta = trans2d(0, 0);
+  const auto theta = std::atan2(stheta, ctheta);
+
+  // p' = -R^T * p
+  const auto x = -(ctheta * trans2d(0, 2) - stheta * trans2d(1, 2));
+  const auto y = -(stheta * trans2d(0, 2) + ctheta * trans2d(1, 2));
+
+  return transform2d(theta, x, y);
 }
 
 /**
