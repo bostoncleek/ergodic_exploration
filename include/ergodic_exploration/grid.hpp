@@ -47,6 +47,9 @@ inline double axis_upper(double lower, double resolution, unsigned int size)
 /** @brief Constructs an 2D grid */
 class GridMap
 {
+private:
+  friend class OccupancyMapper;
+
 public:
   /**
    * @brief Constructor
