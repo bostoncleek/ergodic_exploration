@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
 	nav_msgs
   roscpp
 	rospy
+	sensor_msgs
 	tf2
 )
 
@@ -89,6 +90,7 @@ add_library(${PROJECT_NAME}
 	src/${PROJECT_NAME}/buffer.cpp
 	src/${PROJECT_NAME}/collision.cpp
 	src/${PROJECT_NAME}/grid.cpp
+	src/${PROJECT_NAME}/mapping.cpp
 	src/${PROJECT_NAME}/numerics.cpp
 	src/${PROJECT_NAME}/types.cpp
 	# src/${PROJECT_NAME}/ergodic_exploration.cpp
