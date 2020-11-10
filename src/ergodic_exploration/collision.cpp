@@ -9,10 +9,24 @@
 #include <stdexcept>
 
 #include <ergodic_exploration/collision.hpp>
-#include <ergodic_exploration/numerics.hpp>
 
 namespace ergodic_exploration
 {
+/**
+ * @brief Compose sqaured L2 norm between two points
+ * @param x0 - starting x position
+ * @param y0 - starting y position
+ * @param x1 - ending x position
+ * @param y1 - ending y position
+ * @return sqaured L2 norm
+ */
+inline int intDistSqaured(int x0, int y0, int x1, int y1)
+{
+  const auto dx = x1 - x0;
+  const auto dy = y1 - y0;
+  return dx * dx + dy * dy;
+}
+
 Collision::Collision(double boundary_radius, double search_radius,
                      double obstacle_threshold, double occupied_threshold)
   : boundary_radius_(boundary_radius)
