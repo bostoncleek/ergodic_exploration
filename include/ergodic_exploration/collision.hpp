@@ -7,16 +7,46 @@
 
 #pragma once
 
-#include <unordered_map>
+// #include <limits>
 #include <utility>
+#include <unordered_map>
+#include <armadillo>
 
 #include <ergodic_exploration/grid.hpp>
 
 namespace ergodic_exploration
 {
-/** @brief Map obstacle cell index to grid coordinates */
-typedef std::unordered_map<unsigned int, std::pair<unsigned int, unsigned int>>
-    CollisionMap;
+using arma::vec;
+
+/** @brief State of the collision detector */
+enum class CollisionMsg
+{
+  crash,
+  obstacle,
+  none
+};
+
+/** @brief Collision detection parameters */
+struct CollisionConfig
+{
+  /**
+   * @brief Constructor
+   * @param rb - collision boundary
+   * @param rc - collision threshold
+   * @param rm - max search distance
+   * @param cx - x-coordinate (jth column) center of circle
+   * @param cy - y-coordinate (ith row) center of circle
+   */
+  CollisionConfig(int rb, int rc, int rm, int cx, int cy)
+    : r_bnd(rb), r_col(rc), r_max(rm), cx(cx), cy(cy), dx(0), dy(0), sqrd_obs(-1)
+  {
+  }
+
+  const int r_bnd, r_col, r_max;  // bounding , collision, and max search radii
+  const int cx, cy;               // circle center
+  int dx, dy;                     // displacement from circle center to obstacle
+  int sqrd_obs;                   // squared distance circle center to obstacle
+};
 
 /** @brief 2D collision detection */
 class Collision
@@ -26,63 +56,65 @@ public:
    * @brief Constructor
    * @param boundary_radius - collision boundary around robot represented as a circle
    * @param search_radius - radius outside of collision boundary to search for obstacles
-   * @param obstacle_threshold - min distance to obstacle to be considered a collision
+   * @param obstacle_threshold - distance from boundary radius to obstacle to be considered a collision
    * @param occupied_threshold - min probaility [0 1] for a cell to be considered an obstacle
    */
   Collision(double boundary_radius, double search_radius, double obstacle_threshold,
             double occupied_threshold);
 
   /**
-   * @brief Get collision map
-   * @return collision map
+   * @brief Compose distance to closest obstacle
+   * @param dmin[out] - min distance
+   * @param grid - grid map
+   * @param pose - robot state [x, y, theta]
+   * @return state of collision detector
    */
-  const CollisionMap& collisionMap() const;
+  CollisionMsg minDistance(double& dmin, const GridMap& grid, const vec& pose) const;
 
   /**
-   * @brief Find occupied cells in grid within the search radius
-   * @param [in] <name> <parameter_description>
-   * @return <return_description>
-   * @details <details>
+   * @brief Compose displacement vector to closest obstacle
+   * @param horizontal and vertical displacement vector to closest obstacle
+   * @param grid - grid map
+   * @param pose - robot state [x, y, theta]
+   * @return state of collision detector
    */
-  void obstacleCells(const GridMap& grid, unsigned int cx, unsigned int cy);
+  CollisionMsg minDirection(vec& disp, const GridMap& grid, const vec& pose) const;
 
 private:
+  /**
+   * @brief Find occupied cells between collision boundary and max search radius
+   * @param cfg[out] - collision configuration
+   * @param grid - grid map
+   * @return true if there is a collision
+   */
+  bool search(CollisionConfig& cfg, const GridMap& grid) const;
+
   /**
    * @brief Bresenham's circle algorithm
+   * @param cfg[out] - collision configuration
    * @param grid - grid map
    * @param r - radius of circle
-   * @param cx - x-coordinate (jth column) center of circle
-   * @param cy - y-coordinate (ith row) center of circle
-   * @details Perfroms Bresenham's circle algorithm to determine the obstalce cells
+   * @return true if there is a collision
+   * @details Perfroms Bresenham's circle algorithm to detect obstacle cells
    */
-  void bresenhamCircle(const GridMap& grid, int r, unsigned int cx, unsigned int cy);
+  bool bresenhamCircle(CollisionConfig& cfg, const GridMap& grid, int r) const;
 
   /**
-   * @brief Adds cell to collision map
+   * @brief Check if cell is an obstacle
+   * @param cfg[out] - collision configuration
    * @param grid - grid map
-   * @param i - row in the grid (y-coordinate)
-   * @param j - column in the grid (x-coordinate)
-   * @details Cell is added to collision map if within the boundary of the grid and meets
-   * the occupied threshold
+   * @param cj - x-coordinate (jth column) of cell on perimeter of circle
+   * @param ci - y-coordinate (ith row) of cell on perimeter of circle
+   * @return true if there is a collision
    */
-  void addObstacleCell(const GridMap& grid, unsigned int i, unsigned int j);
-
-  /**
-   * @brief Compose the coordinates of cells on circle
-   * @param grid - grid map
-   * @param x - x-axis offset from center
-   * @param y - y-axis offset from center
-   * @param cx - x-coordinate (jth column) center of circle
-   * @param cy - y-coordinate (ith row) center of circle
-   */
-  void cellCoordinates(const GridMap& grid, unsigned int x, unsigned int y,
-                       unsigned int cx, unsigned int cy);
+  bool checkCell(CollisionConfig& cfg, const GridMap& grid, unsigned int cj,
+                 unsigned int ci) const;
 
 private:
-  double boundary_radius_, search_radius_, obstacle_threshold_;
-  double occupied_threshold_;
-  // TODO: pass this in as a parameter to obstacleCells() ??
-  CollisionMap collision_map_;
+  double boundary_radius_;     // circular radius around robot
+  double search_radius_;       // search radius for obstacles
+  double obstacle_threshold_;  // collision distance threshold
+  double occupied_threshold_;  // probaility cell is occupied
 };
 
 }  // namespace ergodic_exploration

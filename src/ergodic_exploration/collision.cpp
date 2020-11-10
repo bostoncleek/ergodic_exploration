@@ -9,6 +9,7 @@
 #include <stdexcept>
 
 #include <ergodic_exploration/collision.hpp>
+#include <ergodic_exploration/numerics.hpp>
 
 namespace ergodic_exploration
 {
@@ -25,114 +26,176 @@ Collision::Collision(double boundary_radius, double search_radius,
         "Search radius must be at least the same size as the boundary radius");
   }
 
-  if (occupied_threshold_ > 100 || occupied_threshold_ < 0)
+  if (occupied_threshold_ > 100.0 || occupied_threshold_ < 0.0)
   {
     throw std::invalid_argument("Occupied threshold must be between 0 and 100");
   }
 }
 
-const CollisionMap& Collision::collisionMap() const
+CollisionMsg Collision::minDistance(double& dmin, const GridMap& grid,
+                                    const vec& pose) const
 {
-  return collision_map_;
-}
+  // pose in grid => {i,j}
+  const auto psg = grid.world2Grid(pose(0), pose(1));
 
-void Collision::bresenhamCircle(const GridMap& grid, int r, unsigned int cx,
-                                unsigned int cy)
-{
-  int x = 0;
-  int y = r;
-  int d = 3 - 2 * r;
-  cellCoordinates(grid, x, y, cx, cy);
-  while (y >= x)
+  CollisionConfig cfg(
+      std::ceil(boundary_radius_ / grid.resolution()),
+      std::ceil((boundary_radius_ + obstacle_threshold_) / grid.resolution()),
+      std::ceil(search_radius_ / grid.resolution()), psg.at(1), psg.at(0));
+
+  // std::cout << "r_bnd: " << cfg.r_bnd << std::endl;
+  // std::cout << "r_col: " << cfg.r_col << std::endl;
+  // std::cout << "r_max: " << cfg.r_max << std::endl;
+
+  if (search(cfg, grid))
   {
-    x++;
-    if (d > 0)
-    {
-      y--;
-      d += 4 * (x - y) + 10;
-    }
-    else
-    {
-      d += 4 * x + 6;
-    }
-    cellCoordinates(grid, x, y, cx, cy);
+    return CollisionMsg::crash;
   }
 
-  // int x = -r;
-  // int y = 0;
-  // int err = 2 - 2 * r;
-  //
-  // while (x < 0)
-  // {
-  //   // Quadrant 1
-  //   checkCell(grid, cy + y, cx - x);
-  //
-  //   // Quadrant 2
-  //   checkCell(grid, cy - x, cx - y);
-  //
-  //   // Quadrant 3
-  //   checkCell(grid, cy - y, cx + x);
-  //
-  //   // Quadrant 4
-  //   checkCell(grid, cy + x, cx + y);
-  //
-  //   r = err;
-  //
-  //   if (r <= y)
-  //   {
-  //     y++;
-  //     err += 2 * y + 1;
-  //   }
-  //
-  //   if (r > x || err > y)
-  //   {
-  //     x++;
-  //     err += 2 * x + 1;
-  //   }
-  // }
+  else if (cfg.sqrd_obs != -1)
+  {
+    dmin = std::sqrt(static_cast<double>(cfg.sqrd_obs)) * grid.resolution() -
+           boundary_radius_;
+
+    return CollisionMsg::obstacle;
+  }
+
+  return CollisionMsg::none;
 }
 
-void Collision::obstacleCells(const GridMap& grid, unsigned int cx, unsigned int cy)
+CollisionMsg Collision::minDirection(vec& disp, const GridMap& grid, const vec& pose) const
 {
-  collision_map_.clear();
+  // TODO: add parameter to enable collision detection
+  // otherwise it will return the direction at the collision
 
-  const int rmax = std::ceil(search_radius_ / grid.resolution());
-  int r = std::ceil(boundary_radius_ / grid.resolution());
+  // TODO: consider weights in barrier function based on collisions
+
+  // pose in grid => {i,j}
+  const auto psg = grid.world2Grid(pose(0), pose(1));
+  // std::cout << "cx: " << psg.at(1) << " cy: " << psg.at(0) << std::endl;
+
+  CollisionConfig cfg(
+      std::ceil(boundary_radius_ / grid.resolution()),
+      std::ceil((boundary_radius_ + obstacle_threshold_) / grid.resolution()),
+      std::ceil(search_radius_ / grid.resolution()), psg.at(1), psg.at(0));
+
+  search(cfg, grid);
+
+  // robot center to obstacle
+  const auto d = std::sqrt(static_cast<double>(cfg.sqrd_obs)) * grid.resolution();
+  // ratio of point on boundary to obstacle over robot center to obstacle
+  const auto ratio = (d - boundary_radius_) / d;
+
+  if (cfg.sqrd_obs != -1)
+  {
+    disp.resize(2);
+    disp(0) = ratio * static_cast<double>(cfg.dx);
+    disp(1) = ratio * static_cast<double>(cfg.dy);
+
+    return CollisionMsg::obstacle;
+  }
+
+  return CollisionMsg::none;
+}
+
+bool Collision::search(CollisionConfig& cfg, const GridMap& grid) const
+{
+  // initialize start and stop radius
+  const auto rmax = cfg.r_max;
+  auto r = cfg.r_bnd;
 
   while (r <= rmax)
   {
-    bresenhamCircle(grid, r, cx, cy);
+    if (bresenhamCircle(cfg, grid, r))
+    {
+      return true;
+    }
     r++;
   }
+
+  return false;
 }
 
-void Collision::addObstacleCell(const GridMap& grid, unsigned int i, unsigned int j)
+bool Collision::bresenhamCircle(CollisionConfig& cfg, const GridMap& grid, int r) const
 {
-  // Signed and unsigned ints were mixed
-  // Check if (i,j) are within the bounds of the grid
-  if (grid.gridBounds(i, j))
+  int x = -r;
+  int y = 0;
+  int err = 2 - 2 * r;
+
+  while (x < 0)
   {
-    // Safe to convert (i,j) to row major index
-    const auto idx = grid.grid2RowMajor(i, j);
-    if (!(grid.getCell(idx) < occupied_threshold_) && !collision_map_.contains(idx))
+    // Quadrant 1
+    if (checkCell(cfg, grid, cfg.cx - x, cfg.cy + y))
     {
-      collision_map_.emplace(idx, std::make_pair(i, j));
+      return true;
+    }
+
+    // Quadrant 2
+    if (checkCell(cfg, grid, cfg.cx - y, cfg.cy - x))
+    {
+      return true;
+    }
+
+    // Quadrant 3
+    if (checkCell(cfg, grid, cfg.cx + x, cfg.cy - y))
+    {
+      return true;
+    }
+
+    // Quadrant 4
+    if (checkCell(cfg, grid, cfg.cx + y, cfg.cy + x))
+    {
+      return true;
+    }
+
+    r = err;
+
+    if (r <= y)
+    {
+      y++;
+      err += 2 * y + 1;
+    }
+
+    if (r > x || err > y)
+    {
+      x++;
+      err += 2 * x + 1;
     }
   }
+
+  return false;
 }
 
-void Collision::cellCoordinates(const GridMap& grid, unsigned int x, unsigned int y,
-                                unsigned int cx, unsigned int cy)
+bool Collision::checkCell(CollisionConfig& cfg, const GridMap& grid, unsigned int cj,
+                          unsigned int ci) const
 {
-  addObstacleCell(grid, cy + y, cx + x);
-  addObstacleCell(grid, cy + y, cx - x);
-  addObstacleCell(grid, cy - y, cx + x);
-  addObstacleCell(grid, cy - y, cx - x);
+  // within the bounds of the grid
+  if (grid.gridBounds(ci, cj) && !(grid.getCell(ci, cj) < occupied_threshold_))
+  {
+    // squared distance circle center to obstacle
+    const auto sqrd_obs = intDistSqaured(cfg.cx, cfg.cy, cj, ci);
 
-  addObstacleCell(grid, cy + x, cx + y);
-  addObstacleCell(grid, cy + x, cx - y);
-  addObstacleCell(grid, cy - x, cx + y);
-  addObstacleCell(grid, cy - x, cx - y);
+    // update smallest squared distance to obstacle
+    if (sqrd_obs < cfg.sqrd_obs || cfg.sqrd_obs == -1)
+    {
+      // std::cout << "ci: " << ci << " cj: " << cj << " p: " << grid.getCell(ci, cj)
+      //           << std::endl;
+      //
+      // std::cout << "squared distance: " << sqrd_obs << std::endl;
+
+      cfg.sqrd_obs = sqrd_obs;
+      cfg.dx = cfg.cx - cj;
+      cfg.dy = cfg.cy - ci;
+    }
+
+    // squared distance is >= 0 the inequality holds
+    // check for collision
+    if (sqrd_obs <= cfg.r_col * cfg.r_col)
+    {
+      return true;
+    }
+  }
+
+  return false;
 }
-
 }  // namespace ergodic_exploration
