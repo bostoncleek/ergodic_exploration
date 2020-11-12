@@ -8,7 +8,6 @@
 #pragma once
 
 #include <cmath>
-#include <cmath>
 // #include <numbers>
 
 #include <armadillo>
@@ -34,6 +33,21 @@ inline bool almost_equal(double d1, double d2, double epsilon = 1.0e-12)
 }
 
 /**
+ * @brief Euclidean distance between two points
+ * @param x0 - x-position point 0
+ * @param y0 - y-position point 0
+ * @param x1 - x-position point 1
+ * @param y1 - y-position point 1
+ * @return euclidean distance
+ */
+inline double distance(double x0, double y0, double x1, double y1)
+{
+  const auto dx = x1 - x0;
+  const auto dy = y1 - y0;
+  return std::sqrt(dx * dx + dy * dy);
+}
+
+/**
  * @brief Convert polar to cartesian coordinates
  * @param angle - angle in radians
  * @param range - range measurement
@@ -46,7 +60,7 @@ inline vec polar2Cartesian(double angle, double range)
 }
 
 /**
- * @brief Convert polar to cartesian coordinates
+ * @brief Convert polar to cartesian homogenous coordinates
  * @param angle - angle in radians
  * @param range - range measurement
  */
