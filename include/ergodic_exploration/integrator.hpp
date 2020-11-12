@@ -25,10 +25,10 @@ using arma::vec;
 
 /**
  * @brief Function representing the time derivatve of the co-state variable
- * @details inputs are co-state, ergodic measure derivatve, and the jacobian
- * of the dynamics w.r.t state
+ * @details inputs are co-state, ergodic measure derivatve, barrier derivatve,
+ * and the jacobian of the dynamics w.r.t state
  */
-typedef std::function<vec(const vec&, const vec&, const mat&)> CoStateFunc;
+typedef std::function<vec(const vec&, const vec&, const vec&, const mat&)> CoStateFunc;
 
 /** @brief 4th order Runge-Kutta integration */
 class RungeKutta
@@ -70,18 +70,21 @@ public:
    * @param xt - forward porpagated dynamic model trajectory
    * @param ut - control signal
    * @param edx - derivatve of the ergodic measure for each state in xt
+   * @param bdx - derivatve of barrier function for each state in xt
    * @param horizon - length of trajectory in time
    * @details co-state is sorted from [t0 tf] no need to index backwards
    */
   template <class ModelT>
   void solve(mat& rhot, const CoStateFunc& func, const ModelT& model, const vec& rhoT,
-             const mat& xt, const mat& ut, const mat& edx, double horizon);
+             const mat& xt, const mat& ut, const mat& edx, const mat& bdx,
+             double horizon);
 
   /**
    * @brief Performs one step of RK4 backwards in time
    * @param func - time derivatve of the co-state variable
    * @param rho - co-state variable
    * @param kldx - derivatve of the ergodic measure approximated by KL divergence
+   * @param dbar - derivatve of barrier function for a state
    * @param fdx - jacobian of the model with respect to the control
    * @return co-state variable
    * @details The robot model is used to compose A = D1[f(x,u)]. The collision
@@ -89,7 +92,8 @@ public:
    * and range finder collisions (dr/dx). The columns of xt, ut, and edx correspond to
    * the state, control, or derivative at a given time.
    */
-  vec step(const CoStateFunc& func, const vec& rho, const vec& kldx, const mat& fdx);
+  vec step(const CoStateFunc& func, const vec& rho, const vec& kldx, const vec& dbar,
+           const mat& fdx);
 
 private:
   double dt_;
@@ -127,7 +131,7 @@ vec RungeKutta::step(const ModelT& model, const vec& x, const vec& u)
 template <class ModelT>
 void RungeKutta::solve(mat& rhot, const CoStateFunc& func, const ModelT& model,
                        const vec& rhoT, const mat& xt, const mat& ut, const mat& edx,
-                       double horizon)
+                       const mat& bdx, double horizon)
 {
   vec rho = rhoT;
   const auto steps = static_cast<unsigned int>(horizon / std::abs(dt_));
@@ -138,18 +142,18 @@ void RungeKutta::solve(mat& rhot, const CoStateFunc& func, const ModelT& model,
   for (unsigned int i = steps; i-- > 0;)
   {
     // Index states, controls, and ergodic measures at end of array
-    rho = step(func, rho, edx.col(i), model.fdx(xt.col(i), ut.col(i)));
+    rho = step(func, rho, edx.col(i), bdx.col(i), model.fdx(xt.col(i), ut.col(i)));
     rhot.col(i) = rho;
   }
 }
 
 vec RungeKutta::step(const CoStateFunc& func, const vec& rho, const vec& kldx,
-                     const mat& fdx)
+                     const vec& dbar, const mat& fdx)
 {
-  const vec k1 = func(rho, kldx, fdx);
-  const vec k2 = func(rho - dt_ * (0.5 * k1), kldx, fdx);
-  const vec k3 = func(rho - dt_ * (0.5 * k2), kldx, fdx);
-  const vec k4 = func(rho - dt_ * k3, kldx, fdx);
+  const vec k1 = func(rho, kldx, dbar, fdx);
+  const vec k2 = func(rho - dt_ * (0.5 * k1), kldx, dbar, fdx);
+  const vec k3 = func(rho - dt_ * (0.5 * k2), kldx, dbar, fdx);
+  const vec k4 = func(rho - dt_ * k3, kldx, dbar, fdx);
   return rho - dt_ / 6.0 * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
 }
 

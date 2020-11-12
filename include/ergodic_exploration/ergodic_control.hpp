@@ -41,12 +41,13 @@ inline double entropy(double p)
  * @brief Time derivatve of the co-state variable
  * @param rho - co-state variable
  * @param kldx - ergodic measure derivative
+ * @param dbar - derivatve of barrier function
  * @param fdx - jacobian of the dynamics w.r.t state A = D1(f(x,u))
  * @return  d/dt[rho]
  */
-inline vec rhodot(const vec& rho, const vec& kldx, const mat& fdx)
+inline vec rhodot(const vec& rho, const vec& kldx, const vec& dbar, const mat& fdx)
 {
-  return kldx - fdx.t() * rho;
+  return kldx - dbar - fdx.t() * rho;
 }
 
 /** @brief Receding horizon ergodic trajectory optimization */
@@ -71,10 +72,12 @@ public:
 
   /**
    * @brief Update the control signal
-   * @param x - current state [x, y, theta] (column vector)
-   * @return first control of the updated control signal
+   * @param collision - collision detector
+   * @param grid - grid map
+   * @param x - current state [x, y, theta]
+   * @return first twist in the updated control signal
    */
-  vec control(const GridMap& grid, const vec& x);
+  vec control(const Collision& collision, const GridMap& grid, const vec& x);
 
 private:
   /**
@@ -98,6 +101,16 @@ private:
   void ergMeasDeriv(const mat& xt);
 
   /**
+   * @brief Log loss barrier function to obstacles of the form -log(b-x)
+   * @param collision - collision detector
+   * @param grid - grid map
+   * @param xt - predicted trajectory
+   * @details Updates a matrix conatining the log loss barrier function derivatve
+   * for each state in xt
+   */
+  void barrier(const Collision& collision, const GridMap& grid, const mat& xt);
+
+  /**
    * @brief Update the control signal
    * @param xt - predicted trajectory
    * @param rhot - co-state variable solution
@@ -116,6 +129,7 @@ private:
   mat ut_;                    // control signal
   mat s_;                     // pair of (x,y) points sampled from map
   mat edx_;                   // ergodic measure derivatives
+  mat bdx_;                   // log loss barrier derivatives
   vec rhoT_;                  // co-state terminal condition
   vec p_;                     // occupancy map entropy vector
   vec q_;                     // trajectory statistics vector
@@ -139,6 +153,7 @@ ErgodicControl<ModelT>::ErgodicControl(const ModelT& model, double dt, double ho
   , ut_(model.action_space, steps_, arma::fill::zeros)
   , s_(2, num_samples)
   , edx_(model.state_space, steps_)
+  , bdx_(model.state_space, steps_, arma::fill::zeros)  // set heading column to zeros
   , rhoT_(model.state_space, arma::fill::zeros)
   , p_(num_samples)
   , q_(num_samples)
@@ -155,11 +170,12 @@ ErgodicControl<ModelT>::ErgodicControl(const ModelT& model, double dt, double ho
   // arma::arma_rng::set_seed(0);
 
   rhodot_ = std::bind(rhodot, std::placeholders::_1, std::placeholders::_2,
-                      std::placeholders::_3);
+                      std::placeholders::_3, std::placeholders::_4);
 }
 
 template <class ModelT>
-vec ErgodicControl<ModelT>::control(const GridMap& grid, const vec& x)
+vec ErgodicControl<ModelT>::control(const Collision& collision, const GridMap& grid,
+                                    const vec& x)
 {
   // Shift columns to the left by 1 and set last column to zeros
   ut_.cols(0, ut_.n_cols - 2) = ut_.cols(1, ut_.n_cols - 1);
@@ -186,9 +202,12 @@ vec ErgodicControl<ModelT>::control(const GridMap& grid, const vec& x)
   ergMeasDeriv(xt);
   // edx_.print("edx:");
 
+  // Derivative of the barrier function
+  barrier(collision, grid, xt);
+
   // Backwards pass
   mat rhot;
-  rk4_.solve(rhot, rhodot_, model_, rhoT_, xt, ut_, edx_, horizon_);
+  rk4_.solve(rhot, rhodot_, model_, rhoT_, xt, ut_, edx_, bdx_, horizon_);
   // rhot.print("rho:");
 
   // Update controls
@@ -278,6 +297,46 @@ void ErgodicControl<ModelT>::ergMeasDeriv(const mat& xt)
 }
 
 template <class ModelT>
+void ErgodicControl<ModelT>::barrier(const Collision& collision, const GridMap& grid,
+                                     const mat& xt)
+{
+  // TODO: add eps param as obstacle padding
+  const auto weight = 1e12;
+  const auto eps = collision.totalPadding();
+
+  for (unsigned int i = 0; i < steps_; i++)
+  {
+    vec dbar;
+    if (collision.minDirection(dbar, grid, xt.col(i)) == CollisionMsg::obstacle)
+    {
+      // x
+      if (std::abs(dbar(0)) < eps)
+      {
+        dbar(0) *= weight;
+      }
+      else
+      {
+        dbar(0) *= 1.0 / dbar(0);
+        // std::cout << "dbar x: " << dbar(0) << std::endl;
+      }
+
+      // y
+      if (std::abs(dbar(1)) < eps)
+      {
+        dbar(1) *= weight;
+      }
+      else
+      {
+        dbar(1) = 1.0 / dbar(1);
+        // std::cout << "dbar y: " << dbar(1) << std::endl;
+      }
+    }
+
+    bdx_(span(0, 1), span(i, i)) = dbar;
+  }
+}
+
+template <class ModelT>
 void ErgodicControl<ModelT>::updateControl(const mat& xt, const mat& rhot)
 {
   for (unsigned int i = 0; i < xt.n_cols; i++)
@@ -288,20 +347,27 @@ void ErgodicControl<ModelT>::updateControl(const mat& xt, const mat& rhot)
     // TODO: add control limits as a parameter
     // TODO: apply filter to control signal (savgol filter)
 
-    // ut_(0, i) = std::clamp(ut_(0, i), -0.1, 0.1);
-    // // ut_(1, i) = std::clamp(ut_(1, i), -0.1, 0.1);
-    // ut_(1, i) = std::clamp(ut_(1, i), -0.5, 0.5);
+    // ut_.col(i).print();
+
+    // see armadillo clamp()
+    ut_(0, i) = std::clamp(ut_(0, i), -0.1, 0.1);
+    ut_(1, i) = std::clamp(ut_(1, i), -0.1, 0.1);
+    ut_(2, i) = std::clamp(ut_(2, i), -0.5, 0.5);
+
+    // ut_(0, i) = std::clamp(ut_(0, i), -1.0, 1.0);
+    // ut_(1, i) = std::clamp(ut_(1, i), -1.0, 1.0);
+    // ut_(2, i) = std::clamp(ut_(2, i), -0.5, 0.5);
 
     // ut_(0,i) = std::clamp(ut_(0,i), -1.0, 1.0);
     // ut_(1,i) = std::clamp(ut_(1,i), -1.0, 1.0);
     // ut_(2,i) = std::clamp(ut_(2,i), -1.0, 1.0);
     // ut_(3,i) = std::clamp(ut_(3,i), -1.0, 1.0);
 
-    if (any(ut_.col(i) > 1.0) || any(ut_.col(i) < -1.0))
-    {
-      // euclidean norm
-      ut_.col(i) /= norm(ut_.col(i), 2);
-    }
+    // if (any(ut_.col(i) > 1.0) || any(ut_.col(i) < -1.0))
+    // {
+    //   // euclidean norm
+    //   ut_.col(i) /= norm(ut_.col(i), 2);
+    // }
   }
 }
 
