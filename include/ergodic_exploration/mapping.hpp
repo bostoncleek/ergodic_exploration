@@ -44,7 +44,7 @@ private:
    * @param x0 - line starting x position
    * @param y0 - line starting y position
    * @param x1 - line ending x position
-   * @param y1 - line ending x position
+   * @param y1 - line ending y position
    * @details Ray tracing is used to find the grid cells in free space.
    * Where x is the jth column and u is the ith row in the grid.
    */
@@ -56,7 +56,7 @@ private:
    * @param x0 - line starting x position
    * @param y0 - line starting y position
    * @param x1 - line ending x position
-   * @param y1 - line ending x position
+   * @param y1 - line ending y position
    * @details x is the jth column and u is the ith row in the grid
    */
   void lineLow(GridMap& grid, int x0, int y0, int x1, int y1) const;
@@ -67,7 +67,7 @@ private:
    * @param x0 - line starting x position
    * @param y0 - line starting y position
    * @param x1 - line ending x position
-   * @param y1 - line ending x position
+   * @param y1 - line ending y position
    * @details x is the jth column and u is the ith row in the grid
    */
   void lineHigh(GridMap& grid, int x0, int y0, int x1, int y1) const;
@@ -78,7 +78,7 @@ private:
    * @param x0 - line starting x position
    * @param y0 - line starting y position
    * @param x1 - line ending x position
-   * @param y1 - line ending x position
+   * @param y1 - line ending y position
    * @details x is the jth column and u is the ith row in the grid
    */
   void lineDiag(GridMap& grid, int x0, int y0, int x1, int y1) const;
