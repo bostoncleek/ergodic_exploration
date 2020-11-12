@@ -10,8 +10,6 @@
 #include <cmath>
 #include <limits>
 
-// #include <geometry_msgs/PoseStamped.h>
-
 #include <ergodic_exploration/grid.hpp>
 #include <ergodic_exploration/collision.hpp>
 
@@ -21,26 +19,39 @@ template <class ModelT>
 class DynamicWindow
 {
 public:
-  DynamicWindow(const ModelT& model, double dt, double horizon, double acc_lim_x,
-                double acc_lim_y, double acc_lim_th, double max_vel_trans,
-                double min_vel_trans, double max_vel_x, double min_vel_x,
-                double max_vel_y, double min_vel_y, double max_rot_vel,
+  DynamicWindow(const ModelT& model, double dt, double horizon, double frequency,
+                double acc_lim_x, double acc_lim_y, double acc_lim_th,
+                double max_vel_trans, double min_vel_trans, double max_vel_x,
+                double min_vel_x, double max_vel_y, double min_vel_y, double max_rot_vel,
                 double min_rot_vel, unsigned int vx_samples, unsigned int vy_samples,
                 unsigned int vth_samples);
 
-  vec control(const Collision& collision, const GridMap& grid, const vec& xs,
-              const vec& xg, const vec& vb);
+  /**
+   * @brief Update control
+   * @param collision - collision detector
+   * @param grid - grid map
+   * @param x0 - current state [x, y, theta]
+   * @param vb - current twist [vx, vy, w]
+   * @param vref - desired twist to follow [vx, vy, w]
+   * @return twist
+   */
+  vec control(const Collision& collision, const GridMap& grid, const vec& x0,
+              const vec& vb, const vec& vref);
 
+private:
   bool trajectory(double& cost, const Collision& collision, const GridMap& grid,
-                  const vec& xs, const vec& xg, const vec& u);
+                  const vec& x0, const vec& vref, const vec& u);
 
-  bool objective(double& loss, const Collision& collision, const GridMap& grid,
-                 const vec& x, const vec& xg, const vec& u);
+  bool collisionLoss(double& loss, const Collision& collision, const GridMap& grid,
+                     const vec& x);
+
+  double controlLoss(const vec& vref, const vec& u);
 
 private:
   ModelT model_;                               // robot's dynamic model
   double dt_;                                  // time step in integration
   double horizon_;                             // control horizon
+  double frequency_;                           // control loop frequency
   double acc_lim_x_, acc_lim_y_, acc_lim_th_;  // acceleration limits
   double max_vel_trans_, min_vel_trans_;       // translational velocity limits
   double max_vel_x_, min_vel_x_;               // velocity limits in x-direction
@@ -54,7 +65,7 @@ private:
 
 template <class ModelT>
 DynamicWindow<ModelT>::DynamicWindow(const ModelT& model, double dt, double horizon,
-                                     double acc_lim_x, double acc_lim_y,
+                                     double frequency, double acc_lim_x, double acc_lim_y,
                                      double acc_lim_th, double max_vel_trans,
                                      double min_vel_trans, double max_vel_x,
                                      double min_vel_x, double max_vel_y, double min_vel_y,
@@ -64,6 +75,7 @@ DynamicWindow<ModelT>::DynamicWindow(const ModelT& model, double dt, double hori
   : model_(model)
   , dt_(dt)
   , horizon_(horizon)
+  , frequency_(frequency)
   , acc_lim_x_(acc_lim_x)
   , acc_lim_y_(acc_lim_y)
   , acc_lim_th_(acc_lim_th)
@@ -84,33 +96,22 @@ DynamicWindow<ModelT>::DynamicWindow(const ModelT& model, double dt, double hori
 
 template <class ModelT>
 vec DynamicWindow<ModelT>::control(const Collision& collision, const GridMap& grid,
-                                   const vec& xs, const vec& xg, const vec& vb)
+                                   const vec& x0, const vec& vb, const vec& vref)
 {
-  // TODO: Add frequency parameter to determine the delta t the max accel is applied
-  // Compose dynamic window
-  const auto vdx_low = std::max(vb(0) - acc_lim_x_ * dt_, min_vel_x_);
-  const auto vdx_high = std::min(vb(0) + acc_lim_x_ * dt_, max_vel_x_);
+  const auto cntrl_dt = 1.0 / frequency_;
+  const auto vdx_low = std::max(vb(0) - acc_lim_x_ * cntrl_dt, min_vel_x_);
+  const auto vdx_high = std::min(vb(0) + acc_lim_x_ * cntrl_dt, max_vel_x_);
 
-  const auto vdy_low = std::max(vb(1) - acc_lim_y_ * dt_, min_vel_y_);
-  const auto vdy_high = std::min(vb(1) + acc_lim_y_ * dt_, max_vel_y_);
+  const auto vdy_low = std::max(vb(1) - acc_lim_y_ * cntrl_dt, min_vel_y_);
+  const auto vdy_high = std::min(vb(1) + acc_lim_y_ * cntrl_dt, max_vel_y_);
 
-  const auto wd_low = std::max(vb(2) - acc_lim_th_ * dt_, min_rot_vel_);
-  const auto wd_high = std::min(vb(2) + acc_lim_th_ * dt_, max_rot_vel_);
-
-  // TODO: make sure samples are at least 1
-  // Search space
-  // const auto dx = (vdx_high - vdx_low) / static_cast<double>(vx_samples_);
-  // const auto dy = (vdy_high - vdy_low) / static_cast<double>(vy_samples_);
-  // const auto dw = (wd_high - wd_low) / static_cast<double>(vth_samples_);
+  const auto wd_low = std::max(vb(2) - acc_lim_th_ * cntrl_dt, min_rot_vel_);
+  const auto wd_high = std::min(vb(2) + acc_lim_th_ * cntrl_dt, max_rot_vel_);
 
   // std::cout << "Window " << std::endl;
   // std::cout << "vx: [ " << vdx_low << ", " << vdx_high << " ]" << std::endl;
   // std::cout << "vy: [ " << vdy_low << ", " << vdy_high << " ]" << std::endl;
   // std::cout << "w: [ " << wd_low << ", " << wd_high << " ]" << std::endl;
-  // std::cout << "Window Discretization " << std::endl;
-  // std::cout << "dx: " << dx  << std::endl;
-  // std::cout << "dy: " << dy  << std::endl;
-  // std::cout << "dw: " << dw  << std::endl;
 
   vec vx_vec = arma::linspace(vdx_low, vdx_high, vx_samples_ + 1);
   vec vy_vec = arma::linspace(vdy_low, vdy_high, vy_samples_ + 1);
@@ -121,6 +122,7 @@ vec DynamicWindow<ModelT>::control(const Collision& collision, const GridMap& gr
   // w_vec.print("ws:");
 
   // TODO: randomly sample and/or add thread pool
+
   // Search velocity space
   vec u_opt(model_.action_space, arma::fill::zeros);
   auto min_cost = std::numeric_limits<double>::max();
@@ -136,7 +138,7 @@ vec DynamicWindow<ModelT>::control(const Collision& collision, const GridMap& gr
         // u.print("Control sample:");
 
         auto cost = 0.0;
-        if(!trajectory(cost, collision, grid, xs, xg, u))
+        if (!trajectory(cost, collision, grid, x0, vref, u))
         {
           // u.print("u:");
           // std::cout << "cost " << cost << std::endl;
@@ -150,8 +152,8 @@ vec DynamicWindow<ModelT>::control(const Collision& collision, const GridMap& gr
         }
 
       }  // end w loop
-    }  // end vy loop
-  }  // end vx loop
+    }    // end vy loop
+  }      // end vx loop
 
   // std::cout << "min cost " << min_cost << std::endl;
 
@@ -160,90 +162,73 @@ vec DynamicWindow<ModelT>::control(const Collision& collision, const GridMap& gr
 
 template <class ModelT>
 bool DynamicWindow<ModelT>::trajectory(double& cost, const Collision& collision,
-                                       const GridMap& grid, const vec& xs, const vec& xg,
-                                       const vec& u)
+                                       const GridMap& grid, const vec& x0,
+                                       const vec& vref, const vec& u)
 {
-  vec x = xs;
+  vec x = x0;
   const auto steps = static_cast<unsigned int>(horizon_ / std::abs(dt_));
 
+  // Check for collisions and distance to obstacles
+  auto obs_loss = 0.0;
   for (unsigned int i = 0; i < steps; i++)
   {
     x = rk4_.step(model_, x, u);
 
     auto loss = 0.0;
-    if (objective(loss, collision, grid, x, xg, u))
+    if (collisionLoss(loss, collision, grid, x))
     {
       return true;
     }
-
-    cost += loss;
+    obs_loss += loss;
   }
+
+  // How closely follows reference control
+  auto cntrl_loss = steps * controlLoss(vref, u);
+
+  // normalize
+  // auto sum = obs_loss + cntrl_loss;
+  // obs_loss /= sum;
+  // cntrl_loss /= sum;
+
+  cost = 1.0 * obs_loss + 1.0 * cntrl_loss;
+
+  // std::cout << "obstacle loss: " << obs_loss << std::endl;
+  // std::cout << "control loss: " << cntrl_loss << std::endl;
+  // std::cout << "cost: " << cost << std::endl;
 
   return false;
 }
 
 template <class ModelT>
-bool DynamicWindow<ModelT>::objective(double& loss, const Collision& collision,
-                                      const GridMap& grid, const vec& x, const vec& xg,
-                                      const vec& u)
+bool DynamicWindow<ModelT>::collisionLoss(double& loss, const Collision& collision,
+                                          const GridMap& grid, const vec& x)
 {
-  // TODO: Add weight parameters
-  // Heading
-  const auto h =
-      std::abs(normalize_angle_PI(normalize_angle_PI(xg(2)) - normalize_angle_PI(x(2))));
-
-  // std::cout << "heading term " << h << std::endl;
-
-  // Distance to goal
-  const auto dgoal = distance(x(0), x(1), xg(0), xg(1));
-
-  // std::cout << "distance to goal: " << dgoal << std::endl;
-
-
   // Clearance
-  auto dmin = std::numeric_limits<double>::max(); // assume obstacles are very far away
+  auto dmin = std::numeric_limits<double>::max();  // assume obstacles are very far away
   if (collision.minDistance(dmin, grid, x) == CollisionMsg::crash)
   {
     // std::cout << "collision" << std::endl;
     return true;
   }
 
-  // // TODO: add threshold parameter for distance to goal
-  // // TODO: make sure u is clamped
-  // // TODO: add rotational velocity to cost
-  // Velocity loss
-  // auto vel_loss = 0.0;
-  // if (dgoal < 0.2)
-  // {
-  //   vel_loss = norm(u.rows(0,1), 2) / max_vel_trans_;
-  // }
-  // else
-  // {
-  //   vel_loss = 1.0 - norm(u.rows(0,1), 2) / max_vel_trans_;
-  // }
-
-  // std::cout << "obstacle term " << (1.0 / dmin) << std::endl;
-
-  // normalize each component
-  vec loss_vec = {h, dgoal, (1.0 / dmin)};
-  loss_vec /= sum(loss_vec);
-
-  // weigh each component
-  vec w = {1.5, 2.0, 10.0};
-
-  loss = dot(loss_vec, w);
-
-
-  // heading_loss + obstacle_loss + velocity_loss
-  // loss = h + dgoal + (1.0 / dmin) + vel_loss;
-  // loss = h + dgoal + vel_loss;
-  // loss = h + dgoal + (1.0 / dmin);
-  //loss = h;
-  // loss = vel_loss;
-
-  // std::cout << "updated loss: " << loss << std::endl;
+  loss = 1.0 / dmin;
 
   return false;
+}
+
+template <class ModelT>
+double DynamicWindow<ModelT>::controlLoss(const vec& vref, const vec& u)
+{
+  mat W(3, 3, arma::fill::zeros);
+  W(0, 0) = 1e3;
+  W(1, 1) = 1e3;
+  W(2, 2) = 1e3;
+
+  // TODO: what to do if vref it outside limits
+  const vec error = vref - u;
+  // error.print("error:");
+  // return arma::sum(arma::abs(vref - u));
+  return dot(error.t() * W, error);
 }
 
 }  // namespace ergodic_exploration
