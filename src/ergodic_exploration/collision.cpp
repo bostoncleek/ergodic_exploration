@@ -49,13 +49,12 @@ Collision::Collision(double boundary_radius, double search_radius,
 CollisionMsg Collision::minDistance(double& dmin, const GridMap& grid,
                                     const vec& pose) const
 {
-  // pose in grid => {i,j}
   const auto psg = grid.world2Grid(pose(0), pose(1));
 
   CollisionConfig cfg(
-      std::ceil(boundary_radius_ / grid.resolution()),
-      std::ceil((boundary_radius_ + obstacle_threshold_) / grid.resolution()),
-      std::ceil(search_radius_ / grid.resolution()), psg.at(1), psg.at(0));
+      std::floor(boundary_radius_ / grid.resolution()),
+      std::floor((boundary_radius_ + obstacle_threshold_) / grid.resolution()),
+      std::floor(search_radius_ / grid.resolution()), psg.at(1), psg.at(0));
 
   // std::cout << "r_bnd: " << cfg.r_bnd << std::endl;
   // std::cout << "r_col: " << cfg.r_col << std::endl;
@@ -82,34 +81,54 @@ CollisionMsg Collision::minDirection(vec& disp, const GridMap& grid, const vec& 
   // TODO: add parameter to enable collision detection
   // otherwise it will return the direction at the collision
 
-  // TODO: consider weights in barrier function based on collisions
+  disp.zeros(2);
 
-  // pose in grid => {i,j}
   const auto psg = grid.world2Grid(pose(0), pose(1));
-  // std::cout << "cx: " << psg.at(1) << " cy: " << psg.at(0) << std::endl;
 
   CollisionConfig cfg(
-      std::ceil(boundary_radius_ / grid.resolution()),
-      std::ceil((boundary_radius_ + obstacle_threshold_) / grid.resolution()),
-      std::ceil(search_radius_ / grid.resolution()), psg.at(1), psg.at(0));
+      std::floor(boundary_radius_ / grid.resolution()),
+      std::floor((boundary_radius_ + obstacle_threshold_) / grid.resolution()),
+      std::floor(search_radius_ / grid.resolution()), psg.at(1), psg.at(0));
 
   search(cfg, grid);
 
-  // robot center to obstacle
-  const auto d = std::sqrt(static_cast<double>(cfg.sqrd_obs)) * grid.resolution();
-  // ratio of point on boundary to obstacle over robot center to obstacle
-  const auto ratio = (d - boundary_radius_) / d;
+  // if (search(cfg, grid))
+  // {
+  //   // std::cout << "Collision" << std::endl;
+  //   return CollisionMsg::crash;
+  // }
 
   if (cfg.sqrd_obs != -1)
   {
-    disp.resize(2);
-    disp(0) = ratio * static_cast<double>(cfg.dx);
-    disp(1) = ratio * static_cast<double>(cfg.dy);
-
+    // displacement robot center to obstacle
+    disp(0) = grid.resolution() * static_cast<double>(cfg.dx);
+    disp(1) = grid.resolution() * static_cast<double>(cfg.dy);
     return CollisionMsg::obstacle;
   }
 
   return CollisionMsg::none;
+}
+
+bool Collision::collisionCheck(const GridMap& grid, const vec& pose) const
+{
+  const auto psg = grid.world2Grid(pose(0), pose(1));
+
+  CollisionConfig cfg(
+      std::floor(boundary_radius_ / grid.resolution()),
+      std::floor((boundary_radius_ + obstacle_threshold_) / grid.resolution()),
+      std::floor(search_radius_ / grid.resolution()), psg.at(1), psg.at(0));
+
+  if (search(cfg, grid))
+  {
+    return true;
+  }
+
+  return false;
+}
+
+double Collision::totalPadding() const
+{
+  return boundary_radius_ + obstacle_threshold_;
 }
 
 bool Collision::search(CollisionConfig& cfg, const GridMap& grid) const
@@ -192,14 +211,9 @@ bool Collision::checkCell(CollisionConfig& cfg, const GridMap& grid, unsigned in
     // update smallest squared distance to obstacle
     if (sqrd_obs < cfg.sqrd_obs || cfg.sqrd_obs == -1)
     {
-      // std::cout << "ci: " << ci << " cj: " << cj << " p: " << grid.getCell(ci, cj)
-      //           << std::endl;
-      //
-      // std::cout << "squared distance: " << sqrd_obs << std::endl;
-
       cfg.sqrd_obs = sqrd_obs;
-      cfg.dx = cfg.cx - cj;
-      cfg.dy = cfg.cy - ci;
+      cfg.dx = cj - cfg.cx;
+      cfg.dy = ci - cfg.cy;
     }
 
     // squared distance is >= 0 the inequality holds

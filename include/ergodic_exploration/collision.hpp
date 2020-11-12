@@ -7,7 +7,6 @@
 
 #pragma once
 
-// #include <limits>
 #include <utility>
 #include <unordered_map>
 #include <armadillo>
@@ -72,13 +71,25 @@ public:
   CollisionMsg minDistance(double& dmin, const GridMap& grid, const vec& pose) const;
 
   /**
-   * @brief Compose displacement vector to closest obstacle
-   * @param horizontal and vertical displacement vector to closest obstacle
+   * @brief Compose displacement vector from closest obstacle
+   * @param horizontal and vertical displacement vector from closest obstacle
    * @param grid - grid map
    * @param pose - robot state [x, y, theta]
    * @return state of collision detector
+   * @details the vector points from obstacle to robot
    */
   CollisionMsg minDirection(vec& disp, const GridMap& grid, const vec& pose) const;
+
+  /**
+   * @brief Check if the given state is a collision
+   * @param grid - grid map
+   * @param pose - robot state [x, y, theta]
+   * @return true if collision
+   */
+  bool collisionCheck(const GridMap& grid, const vec& pose) const;
+
+  /** @brief Return the distance from robot center to collision boundary */
+  double totalPadding() const;
 
 private:
   /**
