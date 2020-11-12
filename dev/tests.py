@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import scipy
+from scipy.integrate import solve_ivp
 
 from fourier import Basis
 from target_distribution import TargetDist
@@ -68,32 +68,32 @@ t_dist = TargetDist(num_pts=50)
 
 
 #######################################################################
-model = SingleIntegrator()
-erg_ctrl = ErgodicControl(explr_space, model, t_dist, horizon=0.5, num_basis=5)
-
-x_curr = np.array([0.5, 0.5])
-t_curr = 0.0
-tf = 10
-dt = 0.1
-N = int(tf/dt)
-trajectory = np.zeros((2,N))
-i = 0
-
-# erg_ctrl.controls(t_curr, x_curr)
-
-while i < N:
-    u = erg_ctrl.controls(t_curr, x_curr)
-    x_curr = model.step(x_curr, u, dt)
-    trajectory[:,i] = x_curr
-    t_curr  = t_curr + dt
-    i = i + 1
-
-
-plt.figure(dpi=110,facecolor='w')
-xy, vals = t_dist.get_grid_spec()
-plt.contourf(*xy, vals, levels=10)
-plt.scatter(trajectory[0], trajectory[1])
-plt.show()
+# model = SingleIntegrator()
+# erg_ctrl = ErgodicControl(explr_space, model, t_dist, horizon=0.5, num_basis=5)
+#
+# x_curr = np.array([0.5, 0.5])
+# t_curr = 0.0
+# tf = 10
+# dt = 0.1
+# N = int(tf/dt)
+# trajectory = np.zeros((2,N))
+# i = 0
+#
+# # erg_ctrl.controls(t_curr, x_curr)
+#
+# while i < N:
+#     u = erg_ctrl.controls(t_curr, x_curr)
+#     x_curr = model.step(x_curr, u, dt)
+#     trajectory[:,i] = x_curr
+#     t_curr  = t_curr + dt
+#     i = i + 1
+#
+#
+# plt.figure(dpi=110,facecolor='w')
+# xy, vals = t_dist.get_grid_spec()
+# plt.contourf(*xy, vals, levels=10)
+# plt.scatter(trajectory[0], trajectory[1])
+# plt.show()
 
 # convert trajectory to distibution
 # ck = erg_ctrl.basis.convert_traj2ck(trajectory)
@@ -225,17 +225,17 @@ plt.show()
 #######################################################################
 # model = Omni()
 #
-# u = np.array([1.0, -1.0, -1.0, 1.0])
+# u = np.array([-1.0, -1.0, -1.0, -1.0])
 # # u = np.array([0.5, 0.4, 0.6, 0.3])
 #
 #
-# x_curr = np.array([0.0, 0.0, 0.0])
-# t_curr = 0.0
-# tf = 5
-# dt = 0.1
-# N = int(tf/dt)
-# trajectory = np.zeros((model.state_space_dim,N))
-# i = 0
+# # x_curr = np.array([0.0, 0.0, 0.0])
+# # t_curr = 0.0
+# # tf = 5
+# # dt = 0.1
+# # N = int(tf/dt)
+# # trajectory = np.zeros((model.state_space_dim,N))
+# # i = 0
 #
 # # x_curr = model.step(x_curr, u, dt)
 #
@@ -256,6 +256,30 @@ plt.show()
 # plt.figure(dpi=110,facecolor='w')
 # plt.plot(trajectory[2])
 # plt.show()
+
+
+#######################################################################
+model = Omni()
+# model = Cart()
+
+u = np.array([1.0, 1.0, 1.0, 1.0])
+x0 = np.array([0.0, 0.0, 0.0])
+
+dt = 0.1
+T = 0.5
+N = int(T/dt)
+print(N)
+tvec = np.linspace(0.0, T, N)
+
+def xdot(t, x, u):
+    return model.f(x, u)
+
+xt_forward = solve_ivp(xdot, [0.0, T], x0, t_eval=tvec, args=(u,)).y
+print(xt_forward)
+
+xT = xt_forward[:,-1]
+xt_backward = solve_ivp(xdot, [T, 0.0], xT, t_eval=tvec[::-1], args=(u,)).y
+print(np.round(xt_backward, 3))
 
 
 

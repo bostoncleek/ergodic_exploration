@@ -16,6 +16,7 @@ explr_space = np.array([0.0, 1.0])
 # PDF representing a 2D distribution
 # where the robot will find the most usesful information
 t_dist = TargetDist(num_pts=50)
+# print(t_dist.grid_vals)
 
 # 2D Kinematic cart
 # model = Cart()
@@ -25,12 +26,13 @@ model = Omni()
 # erg_ctrl = ErgodicControlSE2(explr_space, model, t_dist, horizon=0.5, num_basis=5)
 
 # This does not work as expected
-erg_ctrl = ErgodicControlKL(explr_space, model, t_dist, horizon=0.5, num_samples=10**2, buffer_size=50)
+erg_ctrl = ErgodicControlKL(explr_space, model, t_dist, \
+                    horizon=0.5, num_samples=100, buffer_size=50)
 
-# erg_ctrl = ErgodicControlKLIVP(explr_space, model, t_dist, horizon=0.5, num_samples=10**2, buffer_size=50)
 
-
-x_curr = np.array([0.5, 0.5, 0.0])
+# x_curr = np.array([1.2, 0.5, 0.0])
+x_curr = np.array([0.8, 0.2, 0.0])
+# x_curr = np.array([0.1, 0.1, 0.0])
 t_curr = 0.0
 tf = 50
 dt = 0.1
@@ -38,7 +40,7 @@ N = int(tf/dt)
 trajectory = np.zeros((3,N))
 i = 0
 
-# erg_ctrl.controls(x_curr)
+# print(erg_ctrl.controls(x_curr))
 
 plt.figure(dpi=110,facecolor='w')
 xy, vals = t_dist.get_grid_spec()
@@ -52,13 +54,14 @@ while i < N:
     i = i + 1
     plt.scatter(x_curr[0], x_curr[1])
     plt.pause(0.01)
+    # print(np.round(x_curr[2],3))
 
-# plt.figure(dpi=110,facecolor='w')
-# xy, vals = t_dist.get_grid_spec()
-# plt.contourf(*xy, vals, levels=10)
-# plt.scatter(trajectory[0], trajectory[1])
+#
+# # plt.figure(dpi=110,facecolor='w')
+# # xy, vals = t_dist.get_grid_spec()
+# # plt.contourf(*xy, vals, levels=10)
+# # plt.scatter(trajectory[0], trajectory[1])
 plt.show()
-
 
 #########################################
 # x_eq = np.zeros(3)
