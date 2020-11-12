@@ -164,74 +164,58 @@ public:
    */
   double getCell(unsigned int idx) const;
 
-  /**
-   * @brief Return the grid data
-   */
+  /** @brief Print grid properties */
+  void print() const;
+
+  /** @brief Return the grid data  */
   const GridData& gridData() const
   {
     return grid_data_;
   }
 
-  /**
-   * @brief Return grid resolution
-   * @return resolution
-   */
+  /** @brief Return grid resolution */
   double resolution() const
   {
     return resolution_;
   }
 
-  /**
-   * @brief Return grid xmin
-   */
+  /** @brief Return grid xmin */
   double xmin() const
   {
     return xmin_;
   }
 
-  /**
-   * @brief Return grid ymin
-   */
+  /** @brief Return grid ymin */
   double ymin() const
   {
     return ymin_;
   }
 
-  /**
-   * @brief Return grid xmax
-   */
+  /** @brief Return grid xmax */
   double xmax() const
   {
     return xmax_;
   }
 
-  /**
-   * @brief Return grid ymax
-   */
+  /** @brief Return grid ymax */
   double ymax() const
   {
     return ymax_;
   }
 
-  /**
-   * @brief Return grid x-axis size
-   */
+  /** @brief Return grid x-axis size */
   unsigned int xsize() const
   {
     return xsize_;
   }
 
-  /**
-   * @brief Return y-axis size
-   */
+  /** @brief Return y-axis size */
   unsigned int ysize() const
   {
     return ysize_;
   }
 
-  /**
-   * @brief Return grid size
-   */
+  /** @brief Return grid size */
   unsigned int size() const
   {
     return xsize_ * ysize_;

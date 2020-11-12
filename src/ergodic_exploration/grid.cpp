@@ -152,4 +152,14 @@ double GridMap::getCell(unsigned int idx) const
   return static_cast<double>(grid_data_.at(idx)) / 100.0;
 }
 
+void GridMap::print() const
+{
+  std::cout << "Grid \n"
+            << "x-axis: [" << xmin_ << ", " << xmax_ << "] \n"
+            << "y-axis: [" << ymin_ << ", " << ymax_ << "] \n"
+            << "xsize: " << xsize_ << "\n"
+            << "ysize: " << ysize_ << "\n"
+            << "size: " << grid_data_.size() << std::endl;
+}
+
 }  // namespace ergodic_exploration
