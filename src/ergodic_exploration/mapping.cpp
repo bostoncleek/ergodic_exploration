@@ -57,11 +57,20 @@ bool OccupancyMapper::updateMap(GridMap& grid,
   // pm = Tmb * Tbs * ps
   const mat Tms = transform2d(pose(0), pose(1), pose(2)) * Tbs_;
 
+  const auto range_max = scan->range_max;
+  const auto range_min = scan->range_min;
+
   auto beam_angle = scan->angle_min;
 
   // Itertate over all measurements
   for (unsigned int i = 0; i < scan->ranges.size(); i++)
   {
+    if ((scan->ranges.at(i) > range_max) || (scan->ranges.at(i) < range_min))
+    {
+      beam_angle += scan->angle_increment;
+      continue;
+    }
+
     // Transform laser end point into frame of map
     const vec pt = Tms * polar2CartesianHomo(beam_angle, scan->ranges.at(i));
     const auto ptg = grid.world2Grid(pt(0), pt(1));
