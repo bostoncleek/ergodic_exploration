@@ -88,6 +88,19 @@ inline mat transform2d(double x, double y, double angle)
 }
 
 /**
+ * @brief Construct 2D transformation matrix
+ * @param x - x position
+ * @param y - y position
+ * @details 2D transformation
+ */
+inline mat transform2d(double x, double y)
+{
+  const mat trans2d = { { 1.0, 0.0, x }, { 0.0, 1.0, y }, { 0.0, 0.0, 1.0 } };
+
+  return trans2d;
+}
+
+/**
  * @brief Construct 2D transformation
  * @param angle - yaw in radians
  * @details 2D transformation
