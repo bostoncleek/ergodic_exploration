@@ -98,7 +98,9 @@ template <class ModelT>
 vec DynamicWindow<ModelT>::control(const Collision& collision, const GridMap& grid,
                                    const vec& x0, const vec& vb, const vec& vref)
 {
-  const auto cntrl_dt = 1.0 / frequency_;
+  // const auto cntrl_dt = 1.0 / frequency_;
+  const auto cntrl_dt = 0.2;
+
   const auto vdx_low = std::max(vb(0) - acc_lim_x_ * cntrl_dt, min_vel_x_);
   const auto vdx_high = std::min(vb(0) + acc_lim_x_ * cntrl_dt, max_vel_x_);
 
@@ -113,19 +115,20 @@ vec DynamicWindow<ModelT>::control(const Collision& collision, const GridMap& gr
   // std::cout << "vy: [ " << vdy_low << ", " << vdy_high << " ]" << std::endl;
   // std::cout << "w: [ " << wd_low << ", " << wd_high << " ]" << std::endl;
 
-  vec vx_vec = arma::linspace(vdx_low, vdx_high, vx_samples_ + 1);
-  vec vy_vec = arma::linspace(vdy_low, vdy_high, vy_samples_ + 1);
-  vec w_vec = arma::linspace(wd_low, wd_high, vth_samples_ + 1);
+  const vec vx_vec = arma::linspace(vdx_low, vdx_high, vx_samples_ + 1);
+  const vec vy_vec = arma::linspace(vdy_low, vdy_high, vy_samples_ + 1);
+  const vec w_vec = arma::linspace(wd_low, wd_high, vth_samples_ + 1);
 
   // vx_vec.print("vxs:");
   // vy_vec.print("vys:");
   // w_vec.print("ws:");
 
   // TODO: randomly sample and/or add thread pool
-
   // Search velocity space
   vec u_opt(model_.action_space, arma::fill::zeros);
   auto min_cost = std::numeric_limits<double>::max();
+
+  bool soln_found = false;
 
   for (const auto vx : vx_vec)
   {
@@ -135,25 +138,27 @@ vec DynamicWindow<ModelT>::control(const Collision& collision, const GridMap& gr
       {
         // Froward simulate trajectory and compose cost
         const vec u = { vx, vy, w };
-        // u.print("Control sample:");
 
         auto cost = 0.0;
         if (!trajectory(cost, collision, grid, x0, vref, u))
         {
-          // u.print("u:");
-          // std::cout << "cost " << cost << std::endl;
-
           // minimize cost
           if (cost < min_cost)
           {
             min_cost = cost;
             u_opt = u;
+            soln_found = true;
           }
         }
 
       }  // end w loop
     }    // end vy loop
   }      // end vx loop
+
+  if (!soln_found)
+  {
+    std::cout << "DWA Failed! Not even 1 solution found" << std::endl;
+  }
 
   // std::cout << "min cost " << min_cost << std::endl;
 
@@ -183,17 +188,12 @@ bool DynamicWindow<ModelT>::trajectory(double& cost, const Collision& collision,
   }
 
   // How closely follows reference control
-  auto cntrl_loss = steps * controlLoss(vref, u);
+  auto cntrl_loss = controlLoss(vref, u);
 
-  // normalize
-  // auto sum = obs_loss + cntrl_loss;
-  // obs_loss /= sum;
-  // cntrl_loss /= sum;
+  cost = obs_loss + cntrl_loss;
 
-  cost = 1.0 * obs_loss + 1.0 * cntrl_loss;
-
-  // std::cout << "obstacle loss: " << obs_loss << std::endl;
-  // std::cout << "control loss: " << cntrl_loss << std::endl;
+  std::cout << "obstacle loss: " << obs_loss << std::endl;
+  std::cout << "control loss: " << cntrl_loss << std::endl;
   // std::cout << "cost: " << cost << std::endl;
 
   return false;
@@ -219,15 +219,13 @@ bool DynamicWindow<ModelT>::collisionLoss(double& loss, const Collision& collisi
 template <class ModelT>
 double DynamicWindow<ModelT>::controlLoss(const vec& vref, const vec& u)
 {
+  // TODO: add weights as param
   mat W(3, 3, arma::fill::zeros);
-  W(0, 0) = 1e3;
-  W(1, 1) = 1e3;
-  W(2, 2) = 1e3;
+  W(0, 0) = 1e2;
+  W(1, 1) = 1e2;
+  W(2, 2) = 1e2;
 
-  // TODO: what to do if vref it outside limits
   const vec error = vref - u;
-  // error.print("error:");
-  // return arma::sum(arma::abs(vref - u));
   return dot(error.t() * W, error);
 }
 
