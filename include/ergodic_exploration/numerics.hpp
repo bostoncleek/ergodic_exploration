@@ -4,8 +4,8 @@
  * @date 30 Oct 2020
  * @brief Useful numerical utilities
  */
-
-#pragma once
+#ifndef NUMERICS_HPP
+#define NUMERICS_HPP
 
 #include <cmath>
 // #include <numbers>
@@ -133,6 +133,40 @@ inline mat transform2dInv(const mat& trans2d)
 }
 
 /**
+ * @brief Integrate a constant twist
+ * @param x - current state [x, y, theta]
+ * @param vb - current twist [vx, vy, w]
+ * @param dt - time step
+ * @return new pose [x, y, theta]
+ */
+inline vec integrate_twist(const vec& x, const vec& u, double dt)
+{
+  // Eqn. 13.35 and 13.36 pg 471 Modern Robotics
+  // displacement b to b' (dx, dy, dth)
+  vec dqb(3);
+
+  // no rotation
+  if (almost_equal(u(2), 0.0))
+  {
+    dqb(0) = u(0) * dt;
+    dqb(1) = u(1) * dt;
+    dqb(2) = 0.0;
+  }
+
+  else
+  {
+    const vec vb = u * dt;
+    dqb(0) = (vb(0) * std::sin(vb(2)) + vb(1) * (std::cos(vb(2)) - 1.0)) / vb(2);
+
+    dqb(1) = (vb(1) * std::sin(vb(2)) + vb(0) * (1.0 - std::cos(vb(2)))) / vb(2);
+
+    dqb(2) = vb(2);
+  }
+
+  return x + transform2d(x(2)) * dqb;
+}
+
+/**
  * @brief Wraps angle between -pi and pi
  * @param rad - angle in radians
  * @return wrapped angle in radians
@@ -171,3 +205,4 @@ inline double normalize_angle_2PI(double rad)
 }
 
 }  // namespace ergodic_exploration
+#endif

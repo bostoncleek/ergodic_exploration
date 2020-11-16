@@ -4,8 +4,8 @@
  * @date 28 Oct 2020
  * @brief Numerical integration methods
  */
-
-#pragma once
+#ifndef INTEGRATOR_HPP
+#define INTEGRATOR_HPP
 
 #include <cmath>
 #include <functional>
@@ -156,5 +156,5 @@ vec RungeKutta::step(const CoStateFunc& func, const vec& rho, const vec& kldx,
   const vec k4 = func(rho - dt_ * k3, kldx, dbar, fdx);
   return rho - dt_ / 6.0 * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
 }
-
 }  // namespace ergodic_exploration
+#endif

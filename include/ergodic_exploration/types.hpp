@@ -4,8 +4,8 @@
  * @date 4 Nov 2020
  * @brief Types
  */
-
-#pragma once
+#ifndef TYPES_HPP
+#define TYPES_HPP
 
 #include <iosfwd>
 
@@ -42,3 +42,4 @@ struct Twist2D
  */
 std::ostream& operator<<(std::ostream& os, const Twist2D& twist);
 }  // namespace ergodic_exploration
+#endif

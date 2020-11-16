@@ -4,8 +4,8 @@
  * @date 8 Nov 2020
  * @brief Occupancy grid mapping
  */
-
-#pragma once
+#ifndef MAPPING_HPP
+#define MAPPING_HPP
 
 #include <armadillo>
 
@@ -100,5 +100,5 @@ private:
   double log_odds_occ_;                  // log odds occupied
   double log_odds_free_;                 // log odds free
 };
-
 }  // namespace ergodic_exploration
+#endif

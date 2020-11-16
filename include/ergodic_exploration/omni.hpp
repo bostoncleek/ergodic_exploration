@@ -4,8 +4,8 @@
  * @date 30 Oct 2020
  * @brief Kinematic 4 wheel omni directional robot
  */
-
-#pragma once
+#ifndef OMNI_HPP
+#define OMNI_HPP
 
 #include <cmath>
 #include <armadillo>
@@ -180,5 +180,5 @@ struct Omni
   unsigned int action_space;  // control space dimension
   unsigned int state_space;   // states space dimension
 };
-
 }  // namespace ergodic_exploration
+#endif

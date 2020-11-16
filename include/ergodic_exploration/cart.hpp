@@ -4,8 +4,8 @@
  * @date 28 Oct 2020
  * @brief Kinematic 2 wheel cart
  */
-
-#pragma once
+#ifndef CART_HPP
+#define CART_HPP
 
 #include <cmath>
 #include <armadillo>
@@ -167,3 +167,4 @@ struct SimpleCart
   unsigned int state_space;   // states space dimension
 };
 }  // namespace ergodic_exploration
+#endif

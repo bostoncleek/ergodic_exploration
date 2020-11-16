@@ -4,8 +4,8 @@
  * @date 27 Oct 2020
  * @brief Collision checking in 2D
  */
-
-#pragma once
+#ifndef COLLISION_HPP
+#define COLLISION_HPP
 
 #include <utility>
 #include <unordered_map>
@@ -127,5 +127,5 @@ private:
   double obstacle_threshold_;  // collision distance threshold
   double occupied_threshold_;  // probaility cell is occupied
 };
-
 }  // namespace ergodic_exploration
+#endif

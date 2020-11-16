@@ -4,8 +4,8 @@
  * @date 5 Nov 2020
  * @brief Ergodic control strategy for exploration
  */
-
-#pragma once
+#ifndef ERGODIC_CONTROL_HPP
+#define ERGODIC_CONTROL_HPP
 
 #include <cmath>
 #include <stdexcept>
@@ -29,9 +29,14 @@ using arma::span;
 inline double entropy(double p)
 {
   // Assign zero information gain
-  if (almost_equal(0.0, p) || almost_equal(1.0, p) || p < 0.0)
+  if (almost_equal(0.0, p) || almost_equal(1.0, p) /*|| p < 0.0*/)
   {
     return 0.0;
+  }
+
+  else if (p < 0.0)
+  {
+    return 0.7;
   }
 
   return -p * std::log(p) - (1.0 - p) * std::log(1.0 - p);
@@ -246,6 +251,7 @@ void ErgodicControl<ModelT>::sample(const GridMap& grid)
   {
     p_ /= sum;
   }
+  std::cout << "Sum: " << sum << std::endl;
 }
 
 template <class ModelT>
@@ -350,8 +356,12 @@ void ErgodicControl<ModelT>::updateControl(const mat& xt, const mat& rhot)
     // ut_.col(i).print();
 
     // see armadillo clamp()
-    ut_(0, i) = std::clamp(ut_(0, i), -0.1, 0.1);
-    ut_(1, i) = std::clamp(ut_(1, i), -0.1, 0.1);
+    // ut_(0, i) = std::clamp(ut_(0, i), -0.1, 0.1);
+    // ut_(1, i) = std::clamp(ut_(1, i), -0.1, 0.1);
+    // ut_(2, i) = std::clamp(ut_(2, i), -0.5, 0.5);
+
+    ut_(0, i) = std::clamp(ut_(0, i), -0.5, 0.5);
+    ut_(1, i) = std::clamp(ut_(1, i), -0.5, 0.5);
     ut_(2, i) = std::clamp(ut_(2, i), -0.5, 0.5);
 
     // ut_(0, i) = std::clamp(ut_(0, i), -1.0, 1.0);
@@ -370,5 +380,5 @@ void ErgodicControl<ModelT>::updateControl(const mat& xt, const mat& rhot)
     // }
   }
 }
-
 }  // namespace ergodic_exploration
+#endif

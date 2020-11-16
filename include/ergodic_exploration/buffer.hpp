@@ -4,8 +4,8 @@
  * @date 8 Nov 2020
  * @brief Stores past states
  */
-
-#pragma once
+#ifndef BUFFER_HPP
+#define BUFFER_HPP
 
 #include <unordered_map>
 #include <armadillo>
@@ -44,5 +44,5 @@ private:
   unsigned int batch_size_;                       // number of states sampled from memory
   std::unordered_map<unsigned int, vec> memory_;  // past states
 };
-
 }  // namespace ergodic_exploration
+#endif

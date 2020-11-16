@@ -4,8 +4,8 @@
  * @date 23 Oct 2020
  * @brief 2D grid represented in row major order
  */
-
-#pragma once
+#ifndef GRID_HPP
+#define GRID_HPP
 
 #include <iosfwd>
 #include <cmath>
@@ -228,3 +228,4 @@ private:
 };
 
 }  // namespace ergodic_exploration
+#endif
