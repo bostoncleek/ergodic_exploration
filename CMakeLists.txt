@@ -15,7 +15,6 @@ find_package(catkin REQUIRED COMPONENTS
 	geometry_msgs
 	nav_msgs
   roscpp
-	rospy
 	sensor_msgs
 	tf2
 )
@@ -65,7 +64,6 @@ catkin_package(
  LIBRARIES ${PROJECT_NAME}
  CATKIN_DEPENDS
 	roscpp
-	rospy
  # DEPENDS
 )
 
@@ -84,12 +82,12 @@ include
 # Declare a C++ library
 add_library(${PROJECT_NAME}
 	include/${PROJECT_NAME}/cart.hpp
-	include/${PROJECT_NAME}/dynamic_window.hpp
 	include/${PROJECT_NAME}/ergodic_control.hpp
 	include/${PROJECT_NAME}/integrator.hpp
 	include/${PROJECT_NAME}/omni.hpp
 	src/${PROJECT_NAME}/buffer.cpp
 	src/${PROJECT_NAME}/collision.cpp
+	src/${PROJECT_NAME}/dynamic_window.cpp
 	src/${PROJECT_NAME}/grid.cpp
 	src/${PROJECT_NAME}/mapping.cpp
 	src/${PROJECT_NAME}/numerics.cpp
@@ -105,6 +103,7 @@ add_library(${PROJECT_NAME}
 
 
 # Declare a C++ executable
+add_executable(dwa src/dwa_node.cpp)
 add_executable(exploration src/exploration_node.cpp)
 add_executable(test_node src/test_node.cpp)
 
@@ -120,6 +119,12 @@ add_executable(test_node src/test_node.cpp)
 # Specify libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
+	${ARMADILLO_LIBRARIES}
+)
+
+target_link_libraries(dwa
+  ${catkin_LIBRARIES}
+	${PROJECT_NAME}
 	${ARMADILLO_LIBRARIES}
 )
 
@@ -147,7 +152,7 @@ target_link_libraries(test_node
 # )
 
 # Mark executables for installation
-install(TARGETS exploration test_node
+install(TARGETS dwa exploration test_node
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
