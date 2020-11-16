@@ -28,6 +28,11 @@ using arma::span;
  */
 inline double entropy(double p)
 {
+  // if ( p > 0.0 && p < 1.0)
+  // {
+  //   std::cout << "p: " << p << std::endl;
+  // }
+
   // Assign zero information gain
   if (almost_equal(0.0, p) || almost_equal(1.0, p) /*|| p < 0.0*/)
   {
@@ -86,10 +91,21 @@ public:
 
 private:
   /**
-   * @brief Samples map
+   * @brief Initialize proposal distribution
    * @param grid - occupancy map
    */
-  void sample(const GridMap& grid);
+  void initProposal(const GridMap& grid);
+
+  /**
+   * @brief Update proposal distribution
+   */
+  void updateProposal();
+
+  /**
+   * @brief Sample proposal distribution
+   * @param grid - occupancy map
+   */
+  void sampleProposal(const GridMap& grid);
 
   /**
    * @brief Compose time averaged trajectory statistics
@@ -129,13 +145,17 @@ private:
   double horizon_;            // control horizon
   unsigned int num_samples_;  // number of samples drawn from map
   unsigned int steps_;        // number of steps used in integration
+  bool proposal_;             // proposal distribution is initialized
   mat Rinv_;                  // inverse of the control weight matrix
   mat Sigmainv_;              // inverse of the robot's (x,y) position uncertainty
   mat ut_;                    // control signal
   mat s_;                     // pair of (x,y) points sampled from map
   mat edx_;                   // ergodic measure derivatives
   mat bdx_;                   // log loss barrier derivatives
+  mat cov_;                   // target distribution covariance
+  vec mu_;                    // target distribution mean
   vec rhoT_;                  // co-state terminal condition
+  vec w_;                     // importance sample weights
   vec p_;                     // occupancy map entropy vector
   vec q_;                     // trajectory statistics vector
   RungeKutta rk4_;            // integrator
@@ -153,13 +173,17 @@ ErgodicControl<ModelT>::ErgodicControl(const ModelT& model, double dt, double ho
   , horizon_(horizon)
   , num_samples_(num_samples)
   , steps_(static_cast<unsigned int>(horizon / dt))
+  , proposal_(false)
   , Rinv_(inv(R))
   , Sigmainv_(inv(Sigma))
   , ut_(model.action_space, steps_, arma::fill::zeros)
-  , s_(2, num_samples)
+  , s_(2, num_samples)  // exploration space is set to (x,y)
   , edx_(model.state_space, steps_)
   , bdx_(model.state_space, steps_, arma::fill::zeros)  // set heading column to zeros
+  , cov_(2, 2)
+  , mu_(2)
   , rhoT_(model.state_space, arma::fill::zeros)
+  , w_(num_samples)
   , p_(num_samples)
   , q_(num_samples)
   , rk4_(dt)
@@ -182,6 +206,12 @@ template <class ModelT>
 vec ErgodicControl<ModelT>::control(const Collision& collision, const GridMap& grid,
                                     const vec& x)
 {
+  // initialize the proposal distribution
+  // if (!proposal_)
+  // {
+  //   initProposal(grid);
+  // }
+
   // Shift columns to the left by 1 and set last column to zeros
   ut_.cols(0, ut_.n_cols - 2) = ut_.cols(1, ut_.n_cols - 1);
   ut_.col(ut_.n_cols - 1).fill(0.0);
@@ -192,7 +222,7 @@ vec ErgodicControl<ModelT>::control(const Collision& collision, const GridMap& g
   // xt.print("xt:");
 
   // Sample (x,y) space
-  sample(grid);
+  sampleProposal(grid);
   // p_.print("p:");
 
   // Sample past states
@@ -226,23 +256,111 @@ vec ErgodicControl<ModelT>::control(const Collision& collision, const GridMap& g
 }
 
 template <class ModelT>
-void ErgodicControl<ModelT>::sample(const GridMap& grid)
+void ErgodicControl<ModelT>::initProposal(const GridMap& grid)
 {
+  proposal_ = true;
+
   // Uniformly generate sample [0 1]
   s_.randu(2, num_samples_);
-  // s_.print();
+
+  // Scale based on grid domain
+  s_.row(0) *= (grid.xmax() - grid.xmin()) + grid.xmin();
+  s_.row(1) *= (grid.ymax() - grid.ymin()) + grid.ymin();
+
+  for (unsigned int i = 0; i < num_samples_; i++)
+  {
+    w_(i) = grid.getCell(s_(0, i), s_(1, i));
+  }
+
+  // Normalize the sampled values
+  const auto total = sum(w_);
+  if (!almost_equal(0.0, total))
+  {
+    w_ /= total;
+  }
+  // std::cout << "Sum: " << sum << std::endl;
+
+  updateProposal();
+}
+
+template <class ModelT>
+void ErgodicControl<ModelT>::updateProposal()
+{
+  vec mu_prev = mu_;
+
+  // Update mean
+  mu_ = s_ * w_;
+  // mu_.print("mean");
+
+  // // Update covariance
+  // mat diff1 = s_;
+  // diff1.each_col() -= mu_;
+  //
+  // mat diff2 = diff1;
+  //
+  // diff1.each_row() %= p_.t();
+  //
+  // cov_ = diff1 * diff2.t();
+
+  // TODO: does the cov update use mu at i not i+1?
+  vec diff(2);
+  for (unsigned int i = 0; i < num_samples_; i++)
+  {
+    diff = s_(i) - mu_prev;
+    cov_ += w_(i) * diff * diff.t();
+  }
+
+  // cov_.print("covariance");
+
+  // std::cout << "EES: " << sum(square(w_)) << std::endl;
+}
+
+template <class ModelT>
+void ErgodicControl<ModelT>::sampleProposal(const GridMap& grid)
+{
+  // vec sample(2);
+  // unsigned int i = 0;
+  // while (i < num_samples_)
+  // {
+  //   if (!mvnrnd(sample, mu_, cov_))
+  //   {
+  //     std::cout << "FAILURE! Unable to sample proposal distribution. " << std::endl;
+  //   }
+  //
+  //   if ((sample(0) > grid.xmax()) || (sample(0) < grid.xmin()) ||
+  //       (sample(1) > grid.ymax()) || (sample(1) < grid.ymin()))
+  //   {
+  //     // std::cout << "FAILURED! Sample outside if grid bounds. " << std::endl;
+  //     // s_.col(i).print("sample:");
+  //     continue;
+  //   }
+  //
+  //   s_.col(i) = sample;
+  //   p_(i) = entropy(grid.getCell(s_(0, i), s_(1, i)));
+  //   i++;
+  // }
+  //
+  // // Normalize the sampled values
+  // const auto total = sum(p_);
+  // if (!almost_equal(0.0, total))
+  // {
+  //   p_ /= total;
+  // }
+  //
+  // // std::cout << "EES: " << sum(square(p_)) << std::endl;
+  //
+  // updateProposal();
+
+  // Uniformly generate sample [0 1]
+  s_.randu(2, num_samples_);
 
   // Scale based on grid domain
   s_.row(0) = s_.row(0) * (grid.xmax() - grid.xmin()) + grid.xmin();
   s_.row(1) = s_.row(1) * (grid.ymax() - grid.ymin()) + grid.ymin();
 
-  // Sample grid
   for (unsigned int i = 0; i < num_samples_; i++)
   {
-    // Probability of occupancy [0 1] and -1 for unknown
     p_(i) = entropy(grid.getCell(s_(0, i), s_(1, i)));
-    // p_(i) = grid.getCell(s_(0, i), s_(1, i));
-    // std::cout << "p_i: " << p_(i) << std::endl;
   }
 
   // Normalize the sampled values
@@ -251,7 +369,6 @@ void ErgodicControl<ModelT>::sample(const GridMap& grid)
   {
     p_ /= sum;
   }
-  std::cout << "Sum: " << sum << std::endl;
 }
 
 template <class ModelT>
@@ -269,7 +386,7 @@ void ErgodicControl<ModelT>::trajStat(const mat& xt)
 
     if (almost_equal(0.0, qval))
     {
-      // std::cout << "WARNING: trajectory statistics are zero" << std::endl;
+      std::cout << "WARNING: trajectory statistics are zero" << std::endl;
       qval = 1e-8;
     }
 
@@ -277,10 +394,10 @@ void ErgodicControl<ModelT>::trajStat(const mat& xt)
   }
 
   // Normalize the trajectory statistics
-  const auto sum = accu(q_);
-  if (!almost_equal(0.0, sum))
+  const auto total = sum(q_);
+  if (!almost_equal(0.0, total))
   {
-    q_ /= sum;
+    q_ /= total;
     // std::cout << "sum q: " << sum << std::endl;
   }
 }
@@ -356,13 +473,13 @@ void ErgodicControl<ModelT>::updateControl(const mat& xt, const mat& rhot)
     // ut_.col(i).print();
 
     // see armadillo clamp()
-    // ut_(0, i) = std::clamp(ut_(0, i), -0.1, 0.1);
-    // ut_(1, i) = std::clamp(ut_(1, i), -0.1, 0.1);
-    // ut_(2, i) = std::clamp(ut_(2, i), -0.5, 0.5);
-
-    ut_(0, i) = std::clamp(ut_(0, i), -0.5, 0.5);
-    ut_(1, i) = std::clamp(ut_(1, i), -0.5, 0.5);
+    ut_(0, i) = std::clamp(ut_(0, i), -0.1, 0.1);
+    ut_(1, i) = std::clamp(ut_(1, i), -0.1, 0.1);
     ut_(2, i) = std::clamp(ut_(2, i), -0.5, 0.5);
+
+    // ut_(0, i) = std::clamp(ut_(0, i), -1.0, 1.0);
+    // ut_(1, i) = std::clamp(ut_(1, i), -1.0, 1.0);
+    // ut_(2, i) = std::clamp(ut_(2, i), -2.0, 2.0);
 
     // ut_(0, i) = std::clamp(ut_(0, i), -1.0, 1.0);
     // ut_(1, i) = std::clamp(ut_(1, i), -1.0, 1.0);

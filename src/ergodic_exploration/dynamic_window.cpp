@@ -1,13 +1,12 @@
 /**
-* @file dynamic_window.cpp
-* @author Boston Cleek
-* @date 15 Nov 2020
-* @brief Dynamic window control
-*/
+ * @file dynamic_window.cpp
+ * @author Boston Cleek
+ * @date 15 Nov 2020
+ * @brief Dynamic window control
+ */
 
 #include <ergodic_exploration/dynamic_window.hpp>
 #include <ergodic_exploration/numerics.hpp>
-
 
 namespace ergodic_exploration
 {
@@ -64,7 +63,6 @@ vec DynamicWindow::control(const Collision& collision, const GridMap& grid, cons
   // // number of steps in each rollout
   // const auto steps = static_cast<unsigned int>(horizon_ / dt_);
 
-
   // std::cout << "Window discretization " << std::endl;
   // std::cout << "dvx: " << dvx << std::endl;
   // std::cout << "dvy: " << dvy << std::endl;
@@ -91,16 +89,15 @@ vec DynamicWindow::control(const Collision& collision, const GridMap& grid, cons
         u(2) = w;
 
         auto cost = 0.0;
-        if(!objective(cost, collision, grid, x, vref, u))
+        if (!objective(cost, collision, grid, x, vref, u))
         {
-
           // control error;
           const vec error = vref - u;
           cost += dot(error, error);
 
-
-          const auto v_trans = std::sqrt(max_vel_x_*max_vel_x_ + max_vel_y_*max_vel_y_);
-          const auto v_sample = std::sqrt(u(0)*u(0) + u(1)*u(1));
+          const auto v_trans =
+              std::sqrt(max_vel_x_ * max_vel_x_ + max_vel_y_ * max_vel_y_);
+          const auto v_sample = std::sqrt(u(0) * u(0) + u(1) * u(1));
 
           cost += v_trans - v_sample;
 
@@ -134,10 +131,10 @@ vec DynamicWindow::control(const Collision& collision, const GridMap& grid, cons
   return u_opt;
 }
 
-bool DynamicWindow::objective(double& loss, const Collision& collision, const GridMap& grid,
-                                const vec& x, const vec& vref, const vec& u)
+bool DynamicWindow::objective(double& loss, const Collision& collision,
+                              const GridMap& grid, const vec& x, const vec& vref,
+                              const vec& u)
 {
-
   // number of steps in each rollout
   const auto steps = static_cast<unsigned int>(horizon_ / dt_);
 
@@ -173,4 +170,4 @@ bool DynamicWindow::objective(double& loss, const Collision& collision, const Gr
   // loss = (1.0 / dmin);
   return false;
 }
-}
+}  // namespace ergodic_exploration
