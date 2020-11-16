@@ -103,7 +103,6 @@ add_library(${PROJECT_NAME}
 
 
 # Declare a C++ executable
-add_executable(dwa src/dwa_node.cpp)
 add_executable(exploration src/exploration_node.cpp)
 add_executable(test_node src/test_node.cpp)
 
@@ -119,12 +118,6 @@ add_executable(test_node src/test_node.cpp)
 # Specify libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
-	${ARMADILLO_LIBRARIES}
-)
-
-target_link_libraries(dwa
-  ${catkin_LIBRARIES}
-	${PROJECT_NAME}
 	${ARMADILLO_LIBRARIES}
 )
 
@@ -152,7 +145,7 @@ target_link_libraries(test_node
 # )
 
 # Mark executables for installation
-install(TARGETS dwa exploration test_node
+install(TARGETS exploration test_node
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
