@@ -36,9 +36,9 @@ public:
   vec control(const Collision& collision, const GridMap& grid, const vec& x0,
               const vec& vb, const vec& vref);
 
-  bool objective(double& loss, const Collision& collision, const GridMap& grid, const vec& x,
-                   const vec& vref, const vec& u);
-                   
+  bool objective(double& loss, const Collision& collision, const GridMap& grid,
+                 const vec& x, const vec& vref, const vec& u);
+
 private:
   double dt_;                                  // time step in integration
   double horizon_;                             // control horizon
