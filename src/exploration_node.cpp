@@ -16,6 +16,7 @@
 #include <sensor_msgs/LaserScan.h>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2/utils.h>
 #include <gazebo_msgs/ModelStates.h>
 
 #include <ergodic_exploration/cart.hpp>
@@ -96,7 +97,7 @@ void modelCallBack(const gazebo_msgs::ModelStates& msg)
 
   // find diff_drive robot
   int ctr = 0;
-  for(const auto &item : names)
+  for (const auto& item : names)
   {
     // check for robot
     if (item == "nuridgeback")
@@ -105,7 +106,7 @@ void modelCallBack(const gazebo_msgs::ModelStates& msg)
     }
 
     ctr++;
-  } // end loop
+  }  // end loop
 
   // pose of robot
   const tf2::Quaternion quat(msg.pose[robot_index].orientation.x,
@@ -113,16 +114,10 @@ void modelCallBack(const gazebo_msgs::ModelStates& msg)
                              msg.pose[robot_index].orientation.z,
                              msg.pose[robot_index].orientation.w);
 
-  const tf2::Matrix3x3 rot(quat);
-
-  auto roll = 0.0, pitch = 0.0, yaw = 0.0;
-  rot.getRPY(roll, pitch, yaw);
-
   pose(0) = msg.pose[robot_index].position.x;
   pose(1) = msg.pose[robot_index].position.y;
-  pose(2) = yaw;
+  pose(2) = tf2::getYaw(msg.pose[robot_index].orientation);
 }
-
 
 void mapCallback(const nav_msgs::OccupancyGrid::ConstPtr& msg)
 {
@@ -151,7 +146,7 @@ int main(int argc, char** argv)
   Omni omni;
   //////////////////////////////////////////////////////////////////////////////
   // publish on cmd_vel at a constant frequency
-  const auto frequency = 20.0;
+  const auto frequency = 10.0;
   // EC validation
   const auto dt = 0.1;
   const auto horizon = 0.5;
@@ -185,39 +180,37 @@ int main(int argc, char** argv)
   const auto boundary_radius = 0.7;
   const auto search_radius = 1.0;
   const auto obstacle_threshold = 0.2;
-  const auto occupied_threshold = 0.9;
+  const auto occupied_threshold = 0.8;
 
   Collision collision(boundary_radius, search_radius, obstacle_threshold,
                       occupied_threshold);
   //////////////////////////////////////////////////////////////////////////////
   // ergodic control
-  const auto ec_dt = 0.05;
-  const auto ec_horizon = 3.0;
-  const auto num_samples = 1e3;
+  const auto ec_dt = 0.1;
+  const auto ec_horizon = 2.0;
+  const auto num_samples = 1e4;
   const auto buffer_size = 1e6;
   const auto batch_size = 100;
 
   mat R(3, 3, arma::fill::zeros);
-  R(0, 0) = 0.1;
-  R(1, 1) = 0.1;
+  R(0, 0) = 1.0;
+  R(1, 1) = 1.0;
   R(2, 2) = 0.1;
 
-  const mat Sigma = eye<mat>(2, 2) * 0.0025;
+  // const mat Sigma = eye<mat>(2, 2) * 0.0025;
+  const mat Sigma = eye<mat>(2, 2) * 0.1;
 
   ErgodicControl ergodic_control(omni, ec_dt, ec_horizon, num_samples, buffer_size,
                                  batch_size, R, Sigma);
   //////////////////////////////////////////////////////////////////////////////
   // dwa
-  const auto dwa_dt = 0.1;
-  const auto dwa_horizon = 0.5;
+  const auto dwa_dt = 0.2;
+  const auto dwa_horizon = 1.0;
   const auto dwa_frequency = frequency;
 
   const auto acc_lim_x = 2.5;
   const auto acc_lim_y = 2.5;
   const auto acc_lim_th = 1.0;
-
-  const auto max_vel_trans = 1.0;
-  const auto min_vel_trans = -1.0;
 
   const auto max_vel_x = 1.0;
   const auto min_vel_x = -1.0;
@@ -232,17 +225,16 @@ int main(int argc, char** argv)
   const auto vy_samples = 5;
   const auto vth_samples = 5;
 
-  DynamicWindow dwa(omni, dwa_dt, dwa_horizon, dwa_frequency, acc_lim_x, acc_lim_y,
-                    acc_lim_th, max_vel_trans, min_vel_trans, max_vel_x, min_vel_x,
-                    max_vel_y, min_vel_y, max_rot_vel, min_rot_vel, vx_samples,
-                    vy_samples, vth_samples);
+  DynamicWindow dwa(dwa_dt, dwa_horizon, dwa_frequency, acc_lim_x, acc_lim_y, acc_lim_th,
+                    max_vel_x, min_vel_x, max_vel_y, min_vel_y, max_rot_vel, min_rot_vel,
+                    vx_samples, vy_samples, vth_samples);
   //////////////////////////////////////////////////////////////////////////////
 
   // vec x = { 3.0, 3.0, 3.0/2.0 * PI};
   // vec x = { 3.0, 1.5, 0.0};
   // vec x = { 2.5, 1.5, PI };
   // vec u = { 0.0, 0.0, 0.0 };
-  vec uref = { 0.7, 0.0, 0.1 };
+  vec uref = { 0.7, 0.0, 0.2 };
 
   ros::Rate rate(frequency);
   while (nh.ok())
@@ -251,7 +243,9 @@ int main(int argc, char** argv)
 
     if (map_update)
     {
-      // vec u = ergodic_control.control(collision, grid, pose);
+      auto t_start = std::chrono::high_resolution_clock::now();
+
+      vec u = ergodic_control.control(collision, grid, pose);
       // if (!validateControl(omni, collision, grid, x, u, dt, horizon))
       // {
       //   ROS_INFO_STREAM_NAMED("Collision detected! Enabling DWA!");
@@ -260,8 +254,15 @@ int main(int argc, char** argv)
 
       // ROS_INFO_STREAM_NAMED(LOGNAME, "DWA!");
 
-      vec u = dwa.control(collision, grid, pose, vb, uref);
-      // u.print();
+      // vec u = dwa.control(collision, grid, pose, vb, uref);
+      // u.print("u_t:");
+
+      auto t_end = std::chrono::high_resolution_clock::now();
+      std::cout
+          << "Hz: "
+          << 1.0 / (std::chrono::duration<double, std::milli>(t_end - t_start).count() /
+                    1000.0)
+          << std::endl;
 
       geometry_msgs::Twist twist_msg;
       twist_msg.linear.x = u(0);
@@ -270,7 +271,6 @@ int main(int argc, char** argv)
 
       cmd_pub.publish(twist_msg);
     }
-
 
     // if (scan_update && odom_update)
     // {
@@ -289,7 +289,7 @@ int main(int argc, char** argv)
     //   odom_update = false;
     // }
 
-    // rate.sleep();
+    rate.sleep();
   }
 
   ros::waitForShutdown();

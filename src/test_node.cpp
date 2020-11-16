@@ -80,8 +80,8 @@ int main(int argc, char** argv)
   ergodic_exploration::Collision collision(boundary_radius, search_radius,
                                            obstacle_threshold, occupied_threshold);
   //////////////////////////////////////////////////////////////////////////////
-  const auto dt = 0.05;
-  const auto horizon = 3.0;
+  const auto dt = 0.1;
+  const auto horizon = 2.0;
   const auto num_samples = 1e3;
   const auto buffer_size = 1e6;
   const auto batch_size = 100;
@@ -99,15 +99,12 @@ int main(int argc, char** argv)
 
   //////////////////////////////////////////////////////////////////////////////
   double dwa_dt = 0.1;
-  double dwa_horizon = 0.5;
+  double dwa_horizon = 1.0;
   double dwa_frequency = 20.0;
 
   double acc_lim_x = 1.0;
   double acc_lim_y = 1.0;
   double acc_lim_th = 2.0;
-
-  double max_vel_trans = 1.0;
-  double min_vel_trans = -1.0;
 
   double max_vel_x = 1.0;
   double min_vel_x = -1.0;
@@ -122,11 +119,10 @@ int main(int argc, char** argv)
   unsigned int vy_samples = 10;
   unsigned int vth_samples = 5;
 
-  ergodic_exploration::DynamicWindow dwa(omni, dwa_dt, dwa_horizon, dwa_frequency,
-                                         acc_lim_x, acc_lim_y, acc_lim_th, max_vel_trans,
-                                         min_vel_trans, max_vel_x, min_vel_x, max_vel_y,
-                                         min_vel_y, max_rot_vel, min_rot_vel, vx_samples,
-                                         vy_samples, vth_samples);
+  ergodic_exploration::DynamicWindow dwa(dwa_dt, dwa_horizon, dwa_frequency, acc_lim_x,
+                                         acc_lim_y, acc_lim_th, max_vel_x, min_vel_x,
+                                         max_vel_y, min_vel_y, max_rot_vel, min_rot_vel,
+                                         vx_samples, vy_samples, vth_samples);
   //////////////////////////////////////////////////////////////////////////////
 
   // vec x = { 3.0, 3.0, 3.0/2.0 * PI};
@@ -153,19 +149,19 @@ int main(int argc, char** argv)
 
     if (received)
     {
-      if (ctr == static_cast<int>(loop_freq / control_freq))
-      {
-        u = ergodic_control.control(collision, grid, x);
-        if (!validateControl(omni, collision, grid, x, u, 0.1, 0.5))
-        {
-          std::cout << "DWA" << std::endl;
-          u = dwa.control(collision, grid, x, vb, u);
-        }
-        ctr = 0;
-      }
+      // if (ctr == static_cast<int>(loop_freq / control_freq))
+      // {
+      //   u = ergodic_control.control(collision, grid, x);
+      //   if (!validateControl(omni, collision, grid, x, u, 0.1, 0.5))
+      //   {
+      //     std::cout << "DWA" << std::endl;
+      //     u = dwa.control(collision, grid, x, vb, u);
+      //   }
+      //   ctr = 0;
+      // }
 
-      // u = ergodic_control.control(collision, grid, x);
-      //
+      u = ergodic_control.control(collision, grid, x);
+
       // if (!validateControl(omni, collision, grid, x, u, 0.1, 0.5))
       // {
       //   std::cout << "DWA" << std::endl;
