@@ -1,10 +1,10 @@
 <launch>
   <!-- <arg name="map" default="$(find ergodic_exploration)/maps/building_31_incomplete.yaml"/> -->
-  <arg name="map" default="$(find ergodic_exploration)/maps/cubicles.yaml"/>
+  <!-- <arg name="map" default="$(find ergodic_exploration)/maps/cubicles.yaml"/> -->
 
   <node pkg="ergodic_exploration" type="test_node" name="test_node" output="screen"/>
 
-  <node pkg="map_server" name="map_server" type="map_server" args="$(arg map)"/>
+  <!-- <node pkg="map_server" name="map_server" type="map_server" args="$(arg map)"/> -->
 
  <node name="rviz" pkg="rviz" type="rviz" required="true" args="-d $(find ergodic_exploration)/config/test_explore.rviz"/>
 </launch>

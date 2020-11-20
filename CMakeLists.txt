@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
 	sensor_msgs
 	tf2
+	visualization_msgs
 )
 
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -91,6 +92,7 @@ add_library(${PROJECT_NAME}
 	src/${PROJECT_NAME}/grid.cpp
 	src/${PROJECT_NAME}/mapping.cpp
 	src/${PROJECT_NAME}/numerics.cpp
+	src/${PROJECT_NAME}/target.cpp
 	src/${PROJECT_NAME}/types.cpp
 	# src/${PROJECT_NAME}/ergodic_exploration.cpp
 )

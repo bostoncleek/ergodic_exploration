@@ -11,41 +11,17 @@
 #include <stdexcept>
 #include <algorithm>
 
+#include <nav_msgs/Path.h>
+#include <visualization_msgs/Marker.h>
+#include <tf2/LinearMath/Quaternion.h>
+
 #include <ergodic_exploration/buffer.hpp>
-#include <ergodic_exploration/grid.hpp>
-#include <ergodic_exploration/numerics.hpp>
 #include <ergodic_exploration/integrator.hpp>
+#include <ergodic_exploration/target.hpp>
 
 namespace ergodic_exploration
 {
 using arma::span;
-
-// TODO: check base 2 or e ???
-/**
- * @brief Entropy of a single grid cell
- * @param prob_occu - probability grid cell is occupied represented as a decimal
- * @return entropy
- */
-inline double entropy(double p)
-{
-  // if ( p > 0.0 && p < 1.0)
-  // {
-  //   std::cout << "p: " << p << std::endl;
-  // }
-
-  // Assign zero information gain
-  if (almost_equal(0.0, p) || almost_equal(1.0, p) /*|| p < 0.0*/)
-  {
-    return 0.0;
-  }
-
-  else if (p < 0.0)
-  {
-    return 0.7;
-  }
-
-  return -p * std::log(p) - (1.0 - p) * std::log(1.0 - p);
-}
 
 /**
  * @brief Time derivatve of the co-state variable
@@ -57,7 +33,9 @@ inline double entropy(double p)
  */
 inline vec rhodot(const vec& rho, const vec& kldx, const vec& dbar, const mat& fdx)
 {
-  return kldx - dbar - fdx.t() * rho;
+  // return kldx - dbar - fdx.t() * rho;
+  return kldx - fdx.t() * rho;
+
 }
 
 /** @brief Receding horizon ergodic trajectory optimization */
@@ -87,26 +65,13 @@ public:
    * @param x - current state [x, y, theta]
    * @return first twist in the updated control signal
    */
-  vec control(const Collision& collision, const GridMap& grid, const vec& x);
+  vec control(const Collision& collision, const GridMap& grid, const Target& target, const vec& x);
+
+  void path(nav_msgs::Path& path, std::string frame) const;
+
+  void samples(visualization_msgs::Marker& marker, std::string frame) const;
 
 private:
-  /**
-   * @brief Initialize proposal distribution
-   * @param grid - occupancy map
-   */
-  void initProposal(const GridMap& grid);
-
-  /**
-   * @brief Update proposal distribution
-   */
-  void updateProposal();
-
-  /**
-   * @brief Sample proposal distribution
-   * @param grid - occupancy map
-   */
-  void sampleProposal(const GridMap& grid);
-
   /**
    * @brief Compose time averaged trajectory statistics
    * @param xt - trajectory
@@ -119,7 +84,7 @@ private:
    * @param xt - predicted trajectory
    * @details Updates a matrix containing ergodic measure derivatve for each state in xt
    */
-  void ergMeasDeriv(const mat& xt);
+  void ergMeasDeriv();
 
   /**
    * @brief Log loss barrier function to obstacles of the form -log(b-x)
@@ -129,7 +94,7 @@ private:
    * @details Updates a matrix conatining the log loss barrier function derivatve
    * for each state in xt
    */
-  void barrier(const Collision& collision, const GridMap& grid, const mat& xt);
+  void barrier(const Collision& collision, const GridMap& grid);
 
   /**
    * @brief Update the control signal
@@ -137,7 +102,7 @@ private:
    * @param rhot - co-state variable solution
    * @details rhot is assumed to already be sorted from [t0 tf] with t0 at index 0
    */
-  void updateControl(const mat& xt, const mat& rhot);
+  void updateControl(const mat& rhot);
 
 private:
   ModelT model_;              // robot's dynamic model
@@ -145,18 +110,15 @@ private:
   double horizon_;            // control horizon
   unsigned int num_samples_;  // number of samples drawn from map
   unsigned int steps_;        // number of steps used in integration
-  bool proposal_;             // proposal distribution is initialized
   mat Rinv_;                  // inverse of the control weight matrix
   mat Sigmainv_;              // inverse of the robot's (x,y) position uncertainty
   mat ut_;                    // control signal
   mat s_;                     // pair of (x,y) points sampled from map
   mat edx_;                   // ergodic measure derivatives
   mat bdx_;                   // log loss barrier derivatives
-  mat cov_;                   // target distribution covariance
-  vec mu_;                    // target distribution mean
+  mat xt_;                    // current trajectory
   vec rhoT_;                  // co-state terminal condition
-  vec w_;                     // importance sample weights
-  vec p_;                     // occupancy map entropy vector
+  vec p_;                     // normalized target distribution samples
   vec q_;                     // trajectory statistics vector
   RungeKutta rk4_;            // integrator
   ReplayBuffer buffer_;       // store past states
@@ -173,17 +135,14 @@ ErgodicControl<ModelT>::ErgodicControl(const ModelT& model, double dt, double ho
   , horizon_(horizon)
   , num_samples_(num_samples)
   , steps_(static_cast<unsigned int>(horizon / dt))
-  , proposal_(false)
   , Rinv_(inv(R))
   , Sigmainv_(inv(Sigma))
   , ut_(model.action_space, steps_, arma::fill::zeros)
   , s_(2, num_samples)  // exploration space is set to (x,y)
-  , edx_(model.state_space, steps_)
+  , edx_(model.state_space, steps_, arma::fill::zeros)
   , bdx_(model.state_space, steps_, arma::fill::zeros)  // set heading column to zeros
-  , cov_(2, 2)
-  , mu_(2)
+  , xt_(model.state_space, steps_)
   , rhoT_(model.state_space, arma::fill::zeros)
-  , w_(num_samples)
   , p_(num_samples)
   , q_(num_samples)
   , rk4_(dt)
@@ -195,8 +154,7 @@ ErgodicControl<ModelT>::ErgodicControl(const ModelT& model, double dt, double ho
                                  Increase the horizon or decrease the time step.");
   }
 
-  arma::arma_rng::set_seed_random();
-  // arma::arma_rng::set_seed(0);
+  // arma::arma_rng::set_seed_random();
 
   rhodot_ = std::bind(rhodot, std::placeholders::_1, std::placeholders::_2,
                       std::placeholders::_3, std::placeholders::_4);
@@ -204,49 +162,58 @@ ErgodicControl<ModelT>::ErgodicControl(const ModelT& model, double dt, double ho
 
 template <class ModelT>
 vec ErgodicControl<ModelT>::control(const Collision& collision, const GridMap& grid,
-                                    const vec& x)
+                                    const Target& target, const vec& x)
 {
-  // initialize the proposal distribution
-  // if (!proposal_)
-  // {
-  //   initProposal(grid);
-  // }
-
   // Shift columns to the left by 1 and set last column to zeros
   ut_.cols(0, ut_.n_cols - 2) = ut_.cols(1, ut_.n_cols - 1);
   ut_.col(ut_.n_cols - 1).fill(0.0);
 
   // Forward simulation
-  mat xt;
-  rk4_.solve(xt, model_, x, ut_, horizon_);
+  rk4_.solve(xt_, model_, x, ut_, horizon_);
   // xt.print("xt:");
 
   // Sample (x,y) space
-  sampleProposal(grid);
+  target.sample(s_, p_, grid, num_samples_);
   // p_.print("p:");
 
   // Sample past states
   mat xt_total;
-  buffer_.sampleMemory(xt_total, xt);
+  buffer_.sampleMemory(xt_total, xt_);
+
+  // std::cout << xt_total.n_cols << std::endl;
+
 
   // Time average trajectory statistics using memory and predicted trajectory
   trajStat(xt_total);
   // q_.print("q:");
 
   // Derivative of the ergodic measure w.r.t the state
-  ergMeasDeriv(xt);
+  ergMeasDeriv();
   // edx_.print("edx:");
 
   // Derivative of the barrier function
-  barrier(collision, grid, xt);
+  // barrier(collision, grid);
 
   // Backwards pass
   mat rhot;
-  rk4_.solve(rhot, rhodot_, model_, rhoT_, xt, ut_, edx_, bdx_, horizon_);
+  rk4_.solve(rhot, rhodot_, model_, rhoT_, xt_, ut_, edx_, bdx_, horizon_);
   // rhot.print("rho:");
 
+  max(rhot, 1).print("max rho");
+  min(rhot, 1).print("min rho");
+
+  // std::cout << "max rho x: " << max(rhot.row(0)) << std::endl;
+  // std::cout << "max rho y: " << max(rhot.row(1)) << std::endl;
+  // std::cout << "max rho th: " << max(rhot.row(2)) << std::endl;
+  //
+  // std::cout << "min rho x: " << min(rhot.row(0)) << std::endl;
+  // std::cout << "min rho y: " << min(rhot.row(1)) << std::endl;
+  // std::cout << "min rho th: " << min(rhot.row(2)) << std::endl;
+
+
+
   // Update controls
-  updateControl(xt, rhot);
+  updateControl(rhot);
   // ut_.print("Control:");
 
   // add current state to memory
@@ -256,124 +223,73 @@ vec ErgodicControl<ModelT>::control(const Collision& collision, const GridMap& g
 }
 
 template <class ModelT>
-void ErgodicControl<ModelT>::initProposal(const GridMap& grid)
+void ErgodicControl<ModelT>::path(nav_msgs::Path& path, std::string frame) const
 {
-  proposal_ = true;
-
-  // Uniformly generate sample [0 1]
-  s_.randu(2, num_samples_);
-
-  // Scale based on grid domain
-  s_.row(0) *= (grid.xmax() - grid.xmin()) + grid.xmin();
-  s_.row(1) *= (grid.ymax() - grid.ymin()) + grid.ymin();
-
-  for (unsigned int i = 0; i < num_samples_; i++)
+  path.header.frame_id = frame;
+  path.poses.resize(xt_.n_cols);
+  for (unsigned int i = 0; i < xt_.n_cols; i++)
   {
-    w_(i) = grid.getCell(s_(0, i), s_(1, i));
-  }
+    path.poses.at(i).pose.position.x = xt_(0, i);
+    path.poses.at(i).pose.position.y = xt_(1, i);
 
-  // Normalize the sampled values
-  const auto total = sum(w_);
-  if (!almost_equal(0.0, total))
-  {
-    w_ /= total;
+    tf2::Quaternion quat(xt_(2, i), 0.0, 0.0);
+    path.poses.at(i).pose.orientation.x = quat.x();
+    path.poses.at(i).pose.orientation.y = quat.y();
+    path.poses.at(i).pose.orientation.z = quat.z();
+    path.poses.at(i).pose.orientation.w = quat.w();
   }
-  // std::cout << "Sum: " << sum << std::endl;
-
-  updateProposal();
 }
 
 template <class ModelT>
-void ErgodicControl<ModelT>::updateProposal()
+void ErgodicControl<ModelT>::samples(visualization_msgs::Marker& marker, std::string frame) const
 {
-  vec mu_prev = mu_;
+  marker.header.frame_id = frame;
+  marker.id = 0;
+  marker.type = visualization_msgs::Marker::POINTS;
+  marker.action = visualization_msgs::Marker::ADD;
+  marker.lifetime = ros::Duration(0.0);
+  marker.scale.x = 0.01;
+  marker.scale.y = 0.01;
 
-  // Update mean
-  mu_ = s_ * w_;
-  // mu_.print("mean");
+  marker.color.r = 0.39;
+  marker.color.g = 1.0;
+  marker.color.b = 0.0;
+  marker.color.a = 1.0;
 
-  // // Update covariance
-  // mat diff1 = s_;
-  // diff1.each_col() -= mu_;
-  //
-  // mat diff2 = diff1;
-  //
-  // diff1.each_row() %= p_.t();
-  //
-  // cov_ = diff1 * diff2.t();
+  marker.points.resize(s_.n_cols);
 
-  // TODO: does the cov update use mu at i not i+1?
-  vec diff(2);
-  for (unsigned int i = 0; i < num_samples_; i++)
+  for (unsigned int i = 0; i < s_.n_cols; i++)
   {
-    diff = s_(i) - mu_prev;
-    cov_ += w_(i) * diff * diff.t();
-  }
-
-  // cov_.print("covariance");
-
-  // std::cout << "EES: " << sum(square(w_)) << std::endl;
-}
-
-template <class ModelT>
-void ErgodicControl<ModelT>::sampleProposal(const GridMap& grid)
-{
-  // vec sample(2);
-  // unsigned int i = 0;
-  // while (i < num_samples_)
-  // {
-  //   if (!mvnrnd(sample, mu_, cov_))
-  //   {
-  //     std::cout << "FAILURE! Unable to sample proposal distribution. " << std::endl;
-  //   }
-  //
-  //   if ((sample(0) > grid.xmax()) || (sample(0) < grid.xmin()) ||
-  //       (sample(1) > grid.ymax()) || (sample(1) < grid.ymin()))
-  //   {
-  //     // std::cout << "FAILURED! Sample outside if grid bounds. " << std::endl;
-  //     // s_.col(i).print("sample:");
-  //     continue;
-  //   }
-  //
-  //   s_.col(i) = sample;
-  //   p_(i) = entropy(grid.getCell(s_(0, i), s_(1, i)));
-  //   i++;
-  // }
-  //
-  // // Normalize the sampled values
-  // const auto total = sum(p_);
-  // if (!almost_equal(0.0, total))
-  // {
-  //   p_ /= total;
-  // }
-  //
-  // // std::cout << "EES: " << sum(square(p_)) << std::endl;
-  //
-  // updateProposal();
-
-  // Uniformly generate sample [0 1]
-  s_.randu(2, num_samples_);
-
-  // Scale based on grid domain
-  s_.row(0) = s_.row(0) * (grid.xmax() - grid.xmin()) + grid.xmin();
-  s_.row(1) = s_.row(1) * (grid.ymax() - grid.ymin()) + grid.ymin();
-
-  for (unsigned int i = 0; i < num_samples_; i++)
-  {
-    p_(i) = entropy(grid.getCell(s_(0, i), s_(1, i)));
-  }
-
-  // Normalize the sampled values
-  const auto sum = accu(p_);
-  if (!almost_equal(0.0, sum))
-  {
-    p_ /= sum;
+    marker.points.at(i).x = s_(0, i);
+    marker.points.at(i).y = s_(1, i);
   }
 }
 
 template <class ModelT>
 void ErgodicControl<ModelT>::trajStat(const mat& xt)
 {
+  // for (unsigned int i = 0; i < num_samples_; i++)
+  // {
+  //   vec qvals(xt.n_cols);
+  //   for (unsigned int j = 0; j < xt.n_cols; j++)
+  //   {
+  //     const vec diff = s_.col(i) - xt(span(0, 1), span(j, j));
+  //     qvals(j) = -0.5 * dot(diff.t() * Sigmainv_, diff);
+  //   }
+  //
+  //   const auto c = max(qvals);
+  //   q_(i) = c + log(sum(exp(qvals - c)));
+  //
+  //   if(almost_equal(0.0, q_(i)))
+  //   {
+  //     std::cout << "WARNING: trajectory statistics are zero" << std::endl;
+  //     q_(i) = 1e-8;
+  //   }
+  // }
+  //
+  // q_ /= sum(q_);
+
+
   for (unsigned int i = 0; i < num_samples_; i++)
   {
     auto qval = 0.0;
@@ -381,12 +297,11 @@ void ErgodicControl<ModelT>::trajStat(const mat& xt)
     {
       const vec diff = s_.col(i) - xt(span(0, 1), span(j, j));
       qval += std::exp(-0.5 * dot(diff.t() * Sigmainv_, diff));
-      // std::cout << std::exp(-0.5 * dot(diff.t() * Sigmainv_, diff)) << std::endl;
     }
 
     if (almost_equal(0.0, qval))
     {
-      std::cout << "WARNING: trajectory statistics are zero" << std::endl;
+      // std::cout << "WARNING: trajectory statistics are zero" << std::endl;
       qval = 1e-8;
     }
 
@@ -398,39 +313,93 @@ void ErgodicControl<ModelT>::trajStat(const mat& xt)
   if (!almost_equal(0.0, total))
   {
     q_ /= total;
-    // std::cout << "sum q: " << sum << std::endl;
   }
+
+
+  // for (unsigned int i = 0; i < num_samples_; i++)
+  // {
+  //   // (si - xt)
+  //   mat m = -xt.rows(0, 1);
+  //   m.each_col() += s_.col(i);
+  //   m = square(m.t()) * Sigmainv_;
+  //
+  //   // log pdf of each state in xt
+  //   const vec v = -0.5 * sum(m, 1);
+  //
+  //   const auto c = max(v);
+  //   q_(i) = c + log(sum(exp(v - c)));
+  //
+  //   if(almost_equal(0.0, q_(i)))
+  //   {
+  //     std::cout << "WARNING: trajectory statistics are zero" << std::endl;
+  //     q_(i) = 1e-8;
+  //   }
+  // }
+  //
+  // q_ /= sum(q_);
 }
 
 template <class ModelT>
-void ErgodicControl<ModelT>::ergMeasDeriv(const mat& xt)
+void ErgodicControl<ModelT>::ergMeasDeriv()
 {
   for (unsigned int i = 0; i < steps_; i++)
   {
     vec kldx(3, arma::fill::zeros);
     for (unsigned int j = 0; j < num_samples_; j++)
     {
-      const vec diff = s_.col(j) - xt(span(0, 1), span(i, i));
+      const vec diff = s_.col(j) - xt_(span(0, 1), span(i, i));
       const auto qval = std::exp(-0.5 * dot(diff.t() * Sigmainv_, diff));
       kldx.rows(0, 1) += (p_(j) / q_(j)) * qval * (Sigmainv_ * diff);
     }
 
     edx_.col(i) = kldx;
   }
+
+
+  // vec qbar_max(num_samples_);
+  // for (unsigned int i = 0; i < num_samples_; i++)
+  // {
+  //   vec qvals(steps_);
+  //   for (unsigned int j = 0; j < steps_; j++)
+  //   {
+  //     const vec diff = s_.col(i) - xt_(span(0, 1), span(j, j));
+  //     qvals(j) = -0.5 * dot(diff.t() * Sigmainv_, diff);
+  //   }
+  //
+  //   const auto c = max(qvals);
+  //   // qbar(i) = c + log(sum(exp(qvals - c)));
+  //   qbar_max(i) = c;
+  // }
+  //
+  //
+  // for (unsigned int i = 0; i < steps_; i++)
+  // {
+  //   vec kldx(3, arma::fill::zeros);
+  //   for (unsigned int j = 0; j < num_samples_; j++)
+  //   {
+  //     const vec diff = s_.col(j) - xt_(span(0, 1), span(i, i));
+  //     const auto qbar = std::exp(-0.5 * dot(diff.t() * Sigmainv_, diff) - qbar_max(j));
+  //     // const auto qbar = std::exp(-0.5 * dot(diff.t() * Sigmainv_, diff));
+  //
+  //     const vec dq = qbar * (Sigmainv_ * diff);
+  //
+  //     kldx.rows(0, 1) += (p_(j) / q_(j)) * dq;
+  //   }
+  //
+  //   edx_.col(i) = kldx;
+  // }
 }
 
 template <class ModelT>
-void ErgodicControl<ModelT>::barrier(const Collision& collision, const GridMap& grid,
-                                     const mat& xt)
+void ErgodicControl<ModelT>::barrier(const Collision& collision, const GridMap& grid)
 {
-  // TODO: add eps param as obstacle padding
   const auto weight = 1e12;
   const auto eps = collision.totalPadding();
 
   for (unsigned int i = 0; i < steps_; i++)
   {
     vec dbar;
-    if (collision.minDirection(dbar, grid, xt.col(i)) == CollisionMsg::obstacle)
+    if (collision.minDirection(dbar, grid, xt_.col(i)) == CollisionMsg::obstacle)
     {
       // x
       if (std::abs(dbar(0)) < eps)
@@ -460,41 +429,32 @@ void ErgodicControl<ModelT>::barrier(const Collision& collision, const GridMap& 
 }
 
 template <class ModelT>
-void ErgodicControl<ModelT>::updateControl(const mat& xt, const mat& rhot)
+void ErgodicControl<ModelT>::updateControl(const mat& rhot)
 {
-  for (unsigned int i = 0; i < xt.n_cols; i++)
+  for (unsigned int i = 0; i < xt_.n_cols; i++)
   {
     // rhot is already sorted from t0 to tf
-    ut_.col(i) = -Rinv_ * model_.fdu(xt.col(i)).t() * rhot.col(i);
+    ut_.col(i) = -Rinv_ * model_.fdu(xt_.col(i)).t() * rhot.col(i);
 
     // TODO: add control limits as a parameter
     // TODO: apply filter to control signal (savgol filter)
 
-    // ut_.col(i).print();
+    // ut_.col(i).print("u:");
 
     // see armadillo clamp()
-    ut_(0, i) = std::clamp(ut_(0, i), -0.1, 0.1);
-    ut_(1, i) = std::clamp(ut_(1, i), -0.1, 0.1);
-    ut_(2, i) = std::clamp(ut_(2, i), -0.5, 0.5);
+    // ut_(0, i) = std::clamp(ut_(0, i), -0.1, 0.1);
+    // ut_(1, i) = std::clamp(ut_(1, i), -0.1, 0.1);
+    // ut_(2, i) = std::clamp(ut_(2, i), -0.5, 0.5);
 
     // ut_(0, i) = std::clamp(ut_(0, i), -1.0, 1.0);
     // ut_(1, i) = std::clamp(ut_(1, i), -1.0, 1.0);
     // ut_(2, i) = std::clamp(ut_(2, i), -2.0, 2.0);
 
-    // ut_(0, i) = std::clamp(ut_(0, i), -1.0, 1.0);
-    // ut_(1, i) = std::clamp(ut_(1, i), -1.0, 1.0);
-    // ut_(2, i) = std::clamp(ut_(2, i), -0.5, 0.5);
-
-    // ut_(0,i) = std::clamp(ut_(0,i), -1.0, 1.0);
-    // ut_(1,i) = std::clamp(ut_(1,i), -1.0, 1.0);
-    // ut_(2,i) = std::clamp(ut_(2,i), -1.0, 1.0);
-    // ut_(3,i) = std::clamp(ut_(3,i), -1.0, 1.0);
-
-    // if (any(ut_.col(i) > 1.0) || any(ut_.col(i) < -1.0))
-    // {
-    //   // euclidean norm
-    //   ut_.col(i) /= norm(ut_.col(i), 2);
-    // }
+    if (any(ut_.col(i) > 1.0) || any(ut_.col(i) < -1.0))
+    {
+      // euclidean norm
+      ut_.col(i) /= norm(ut_.col(i), 2);
+    }
   }
 }
 }  // namespace ergodic_exploration

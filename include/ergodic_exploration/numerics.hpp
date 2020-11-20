@@ -48,6 +48,27 @@ inline double distance(double x0, double y0, double x1, double y1)
 }
 
 /**
+ * @brief Entropy of a single grid cell
+ * @param prob_occu - probability grid cell is occupied represented as a decimal
+ * @return entropy
+ */
+inline double entropy(double p)
+{
+  // Assign zero information gain
+  if (almost_equal(0.0, p) || almost_equal(1.0, p) /*|| p < 0.0*/)
+  {
+    return 1e-3;
+  }
+
+  else if (p < 0.0)
+  {
+    return 0.7;
+  }
+
+  return -p * std::log(p) - (1.0 - p) * std::log(1.0 - p);
+}
+
+/**
  * @brief Convert polar to cartesian coordinates
  * @param angle - angle in radians
  * @param range - range measurement
