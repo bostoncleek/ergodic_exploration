@@ -23,10 +23,12 @@ typedef std::vector<Gaussian> GaussianList;
 
 struct Gaussian
 {
-  Gaussian() {}
+  Gaussian()
+  {
+  }
 
   Gaussian(const vec& mu, const vec& sigmas)
-  : mu(mu), cov(arma::diagmat(square(sigmas))), cov_inv(inv(cov))
+    : mu(mu), cov(arma::diagmat(square(sigmas))), cov_inv(inv(cov))
   {
   }
 
@@ -42,7 +44,6 @@ struct Gaussian
   mat cov_inv;
 };
 
-
 struct Target
 {
 public:
@@ -50,9 +51,9 @@ public:
 
   double evaluate(const vec& pt) const;
 
-  void sample(mat& points, vec& phi, const GridMap& grid, unsigned int num_samples) const;
+  void fill(vec& phi_vals, const mat& phi_grid) const;
 
-  void markers(visualization_msgs::MarkerArray& marker_array, std::string frame);
+  void markers(visualization_msgs::MarkerArray& marker_array, std::string frame) const;
 
 private:
   GaussianList gaussians_;

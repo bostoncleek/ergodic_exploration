@@ -8,6 +8,7 @@
 #define NUMERICS_HPP
 
 #include <cmath>
+#include <algorithm>
 // #include <numbers>
 
 #include <armadillo>

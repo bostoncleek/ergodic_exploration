@@ -86,6 +86,7 @@ add_library(${PROJECT_NAME}
 	include/${PROJECT_NAME}/ergodic_control.hpp
 	include/${PROJECT_NAME}/integrator.hpp
 	include/${PROJECT_NAME}/omni.hpp
+	src/${PROJECT_NAME}/basis.cpp
 	src/${PROJECT_NAME}/buffer.cpp
 	src/${PROJECT_NAME}/collision.cpp
 	src/${PROJECT_NAME}/dynamic_window.cpp

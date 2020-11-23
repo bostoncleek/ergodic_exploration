@@ -32,7 +32,6 @@ using arma::vec;
 
 using namespace ergodic_exploration;
 
-
 // static ergodic_exploration::GridMap grid;
 // static bool received;
 
@@ -104,9 +103,8 @@ int main(int argc, char** argv)
   ros::Publisher map_pub = nh.advertise<nav_msgs::OccupancyGrid>("map", 1, true);
   ros::Publisher pose_pub = nh.advertise<geometry_msgs::PoseStamped>("robot", 1, true);
   ros::Publisher path_pub = nh.advertise<nav_msgs::Path>("trajectory", 1, true);
-  ros::Publisher target_pub = nh.advertise<visualization_msgs::MarkerArray>("target", 1, true);
-  ros::Publisher sample_pub = nh.advertise<visualization_msgs::Marker>("samples", 1, true);
-
+  ros::Publisher target_pub =
+      nh.advertise<visualization_msgs::MarkerArray>("target", 1, true);
 
   arma::arma_rng::set_seed_random();
 
@@ -125,9 +123,9 @@ int main(int argc, char** argv)
   //////////////////////////////////////////////////////////////////////////////
   // grid
   const auto xmin = 0.0;
-  const auto xmax = 1.0;
+  const auto xmax = 10.0;
   const auto ymin = 0.0;
-  const auto ymax = 1.0;
+  const auto ymax = 10.0;
   const auto resolution = 0.05;
   const auto xsize = ergodic_exploration::axis_length(xmin, xmax, resolution);
   const auto ysize = ergodic_exploration::axis_length(ymin, ymax, resolution);
@@ -150,24 +148,24 @@ int main(int argc, char** argv)
   const auto search_radius = 0.2;
   const auto obstacle_threshold = 0.05;
   const auto occupied_threshold = 0.9;
-  Collision collision(boundary_radius, search_radius,
-                        obstacle_threshold, occupied_threshold);
+  Collision collision(boundary_radius, search_radius, obstacle_threshold,
+                      occupied_threshold);
   //////////////////////////////////////////////////////////////////////////////
   const auto ec_dt = 0.1;
-  const auto ec_horizon = 0.5;
-  const auto num_samples = 1e3;
+  const auto ec_horizon = 2.0;
+  const auto target_resolution = 0.02;
+  const auto expl_weight = 1.0;
+  const auto num_basis = 10;
   const auto buffer_size = 1e6;
   const auto batch_size = 100;
   // const mat R = eye<mat>(3, 3);
   mat R(3, 3, arma::fill::zeros);
-  R(0, 0) = 100.0;
-  R(1, 1) = 100.0;
-  R(2, 2) = 50.0;
+  R(0, 0) = 1.;
+  R(1, 1) = 1.;
+  R(2, 2) = .5;
 
-  const mat Sigma = eye<mat>(2, 2) * 0.001;
-
-  ErgodicControl ergodic_control(omni, ec_dt, ec_horizon, num_samples,
-                                                      buffer_size, batch_size, R, Sigma);
+  ErgodicControl ergodic_control(omni, collision, ec_dt, ec_horizon, target_resolution,
+                                 expl_weight, num_basis, buffer_size, batch_size, R);
   //////////////////////////////////////////////////////////////////////////////
   // dwa
   // double dwa_dt = 0.1;
@@ -197,11 +195,11 @@ int main(int argc, char** argv)
   //                                        vx_samples, vy_samples, vth_samples);
   //////////////////////////////////////////////////////////////////////////////
 
-  RungeKutta rk4(1.0/loop_freq);
-
-  Gaussian g1({ 0.7, 0.7 }, { 0.1, 0.1 });
-  Gaussian g2({ 0.3, 0.3 }, { 0.1, 0.1 });
+  Gaussian g1({ 2.7, 2.7 }, { 1.4, 1.4 });
+  Gaussian g2({ 7.3, 7.3 }, { 1.4, 1.4 });
   Target target({ g1, g2 });
+
+  ergodic_control.configTarget(grid, target);
 
   visualization_msgs::MarkerArray marker_array;
   target.markers(marker_array, "map");
@@ -209,30 +207,93 @@ int main(int argc, char** argv)
   map_pub.publish(grid_msg);
   target_pub.publish(marker_array);
 
+  vec x = { 0.2, 0.3, 0.0 };
+  // vec x = { 0.3472, 0.3667, 0.0900 };
+  // vec x = { 0.0, 0.0, 0.0 };
+  vec u = { 1.0, 0.2, 0.1 };
 
-  vec x = { 0.3, 0.4, 0.0 };
-  vec u = { 0.0, 0.0, 0.0 };
+  // u = ergodic_control.control(grid, x);
+  // u.print("u");
 
+  // double tf = 0.3;
+  // double dt = 0.01;
+  // const auto steps = static_cast<unsigned int>(tf / std::abs(dt));
+  //
+  // mat ut(3,steps);
+  // ut.row(0).fill(0.5);
+  // ut.row(1).fill(0.2);
+  // ut.row(2).fill(0.3);
+
+  // RungeKutta45 rk45(0.0005, 0.01, 1e-3, 1e6);
+
+  // mat xt1;
+  //
+  // auto t_start = std::chrono::high_resolution_clock::now();
+  //
+  // rk45.solve(xt1, omni, x, ut, dt, tf);
+  //
+  // auto t_end = std::chrono::high_resolution_clock::now();
+  // std::cout << "Hz: " << 1.0 / (std::chrono::duration<double, std::milli>(t_end -
+  // t_start).count() / 1000.0) << std::endl;
+  //
+  // xt1.t().print("xt (rk45)");
+
+  // RungeKutta rk4(dt);
+
+  // mat xt2;
+  // rk4.solve(xt2, omni, x, ut, tf);
+  // xt2.t().print("xt (rk4)");
+
+  // vec x_new;
+  // rk45.step(x_new, omni, x, u);
+  // x_new.print("x (rk45)");
+  //
+  // RungeKutta rk4(dt);
+  // rk4.step(omni, x, u).print("x (rk4)");
+
+  // Basis basis(1.0, 1.0, 5);
+  // vec fk;
+  //
+  // basis.fourierBasis(fk, x);
+  // fk.print("fk");
+  //
+  // mat dfk;
+  // basis.gradFourierBasis(dfk, x);
+  // dfk.t().print("dfk");
+  //
+  // mat xt = { { 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2 },
+  //            { 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3 },
+  //            { 0., 0., 0., 0., 0., 0., 0., 0., 0., 0. } };
+  //
+  // xt.print("xt");
+  //
+  // vec ck;
+  // basis.trajCoeff(ck, xt);
+  // ck.print("ck");
+
+  RungeKutta rk4(0.1);
   auto ctr = 0;
   ros::Rate rate(loop_freq);
 
   while (nh.ok())
   {
-    // ros::spinOnce();
+    ros::spinOnce();
 
-    if (ctr == static_cast<int>(loop_freq / frequency))
-    {
-      u = ergodic_control.control(collision, grid, target, x);
-      // if (!validateControl(omni, collision, grid, x, u, 0.1, 0.5))
-      // {
-      //   std::cout << "DWA" << std::endl;
-      //   u = dwa.control(collision, grid, x, vb, u);
-      // }
-      ctr = 0;
-    }
+    // if (ctr == static_cast<int>(loop_freq / frequency))
+    // {
+    //   u = ergodic_control.control(grid, x);
+    //   // if (!validateControl(omni, collision, grid, x, u, 0.1, 0.5))
+    //   // {
+    //   //   std::cout << "DWA" << std::endl;
+    //   //   u = dwa.control(collision, grid, x, vb, u);
+    //   // }
+    //   ctr = 0;
+    // }
+
+    u = ergodic_control.control(grid, x);
 
     // u = ergodic_control.control(collision, grid, target, x);
-    // u.print("u_t:");
+    u.print("u_t:");
 
     // if (!validateControl(omni, collision, grid, x, u, 0.1, 0.5))
     // {
@@ -269,11 +330,6 @@ int main(int argc, char** argv)
 
     path_pub.publish(trajectory);
 
-    visualization_msgs::Marker marker;
-    ergodic_control.samples(marker, "map");
-
-    sample_pub.publish(marker);
-
     ctr++;
 
     rate.sleep();
@@ -281,7 +337,7 @@ int main(int argc, char** argv)
 
   std::cout << " END " << std::endl;
 
-  ros::waitForShutdown();
+  // ros::waitForShutdown();
   ROS_INFO_STREAM_NAMED("main", "Shutting down.");
   return 0;
 }

@@ -6,5 +6,5 @@
 
   <!-- <node pkg="map_server" name="map_server" type="map_server" args="$(arg map)"/> -->
 
- <node name="rviz" pkg="rviz" type="rviz" required="true" args="-d $(find ergodic_exploration)/config/test_explore.rviz"/>
+  <node name="rviz" pkg="rviz" type="rviz" required="true" args="-d $(find ergodic_exploration)/config/test_explore.rviz"/>
 </launch>

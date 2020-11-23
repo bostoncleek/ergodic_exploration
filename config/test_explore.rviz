@@ -6,7 +6,6 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /MarkerArray1/Status1
       Splitter Ratio: 0.5
     Tree Height: 686
   - Class: rviz/Selection
@@ -92,7 +91,7 @@ Visualization Manager:
       Marker Topic: /samples
       Name: Marker
       Namespaces:
-        "": true
+        {}
       Queue Size: 100
       Value: true
     - Alpha: 1
@@ -155,7 +154,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.6798125505447388
+      Distance: 13.109708786010742
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -163,9 +162,9 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.5216765403747559
-        Y: 0.5042902231216431
-        Z: 0.05658170208334923
+        X: 3.24165415763855
+        Y: 3.946587562561035
+        Z: 0.06002569571137428
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
