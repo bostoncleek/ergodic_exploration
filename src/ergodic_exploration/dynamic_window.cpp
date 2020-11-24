@@ -10,13 +10,14 @@
 
 namespace ergodic_exploration
 {
-DynamicWindow::DynamicWindow(double dt, double horizon, double frequency,
-                             double acc_lim_x, double acc_lim_y, double acc_lim_th,
-                             double max_vel_x, double min_vel_x, double max_vel_y,
-                             double min_vel_y, double max_rot_vel, double min_rot_vel,
-                             unsigned int vx_samples, unsigned int vy_samples,
-                             unsigned int vth_samples)
-  : dt_(dt)
+DynamicWindow::DynamicWindow(const Collision& collision, double dt, double horizon,
+                             double frequency, double acc_lim_x, double acc_lim_y,
+                             double acc_lim_th, double max_vel_x, double min_vel_x,
+                             double max_vel_y, double min_vel_y, double max_rot_vel,
+                             double min_rot_vel, unsigned int vx_samples,
+                             unsigned int vy_samples, unsigned int vth_samples)
+  : collision_(collision)
+  , dt_(dt)
   , horizon_(horizon)
   , frequency_(frequency)
   , acc_lim_x_(acc_lim_x)
@@ -31,11 +32,12 @@ DynamicWindow::DynamicWindow(double dt, double horizon, double frequency,
   , vx_samples_(vx_samples)
   , vy_samples_(vy_samples)
   , vth_samples_(vth_samples)
+  , steps_(static_cast<unsigned int>(std::abs(horizon / dt)))
 {
 }
 
-vec DynamicWindow::control(const Collision& collision, const GridMap& grid, const vec& x,
-                           const vec& vb, const vec& vref)
+vec DynamicWindow::control(const GridMap& grid, const vec& x, const vec& vb,
+                           const vec& vref)
 {
   const auto cntrl_dt = 1.0 / frequency_;
   // const auto cntrl_dt = 0.5;
@@ -89,21 +91,8 @@ vec DynamicWindow::control(const Collision& collision, const GridMap& grid, cons
         u(2) = w;
 
         auto cost = 0.0;
-        if (!objective(cost, collision, grid, x, vref, u))
+        if (!objective(cost, grid, x, vref, u))
         {
-          // control error;
-          const vec error = vref - u;
-          cost += dot(error, error);
-
-          const auto v_trans =
-              std::sqrt(max_vel_x_ * max_vel_x_ + max_vel_y_ * max_vel_y_);
-          const auto v_sample = std::sqrt(u(0) * u(0) + u(1) * u(1));
-
-          cost += v_trans - v_sample;
-
-          // cost += std::abs(u(2) - max_rot_vel_);
-          // cost += std::abs(u(2) - max_rot_vel);
-
           // minimize cost
           if (cost < min_cost)
           {
@@ -131,20 +120,18 @@ vec DynamicWindow::control(const Collision& collision, const GridMap& grid, cons
   return u_opt;
 }
 
-bool DynamicWindow::objective(double& loss, const Collision& collision,
-                              const GridMap& grid, const vec& x, const vec& vref,
-                              const vec& u)
+bool DynamicWindow::objective(double& loss, const GridMap& grid, const vec& x,
+                              const vec& vref, const vec& u)
 {
-  // number of steps in each rollout
-  const auto steps = static_cast<unsigned int>(horizon_ / dt_);
-
   vec pose = x;
-  for (unsigned int t = 0; t < steps; t++)
+  // follow constant twist
+  const vec delta = integrate_twist(pose, u, dt_);
+  for (unsigned int t = 0; t < steps_; t++)
   {
-    pose = integrate_twist(pose, u, dt_);
+    pose += delta;
 
     auto dmin = std::numeric_limits<double>::max();
-    if (collision.minDistance(dmin, grid, pose) == CollisionMsg::crash)
+    if (collision_.minDistance(dmin, grid, pose) == CollisionMsg::crash)
     {
       return true;
     }
@@ -152,22 +139,19 @@ bool DynamicWindow::objective(double& loss, const Collision& collision,
     loss += (1.0 / dmin);
   }
 
-  // // Clearance
-  // // assume obstacles are very far away
-  // auto dmin = std::numeric_limits<double>::max();
-  // if (collision.minDistance(dmin, grid, x) == CollisionMsg::crash)
-  // {
-  //   // collison receives maximum penalty
-  //   // return std::numeric_limits<double>::max();
-  //   return true;
-  // }
+  // control error;
+  const vec cntrl_error = vref - u;
+  loss += dot(cntrl_error, cntrl_error);
 
-  // // control error;
-  // const vec error = vref - u;
+  // const auto v_trans =
+  //     std::sqrt(max_vel_x_ * max_vel_x_ + max_vel_y_ * max_vel_y_);
+  // const auto v_sample = std::sqrt(u(0) * u(0) + u(1) * u(1));
   //
-  // // TODO: add weight parameters
-  // // return 100.0 * (1.0 / dmin) + 1.0 * dot(error, error);
-  // loss = (1.0 / dmin);
+  // loss += v_trans - v_sample;
+
+  // loss += std::abs(u(2) - max_rot_vel_);
+  // loss += std::abs(u(2) - max_rot_vel);
+
   return false;
 }
 }  // namespace ergodic_exploration

@@ -18,9 +18,9 @@ namespace ergodic_exploration
 class DynamicWindow
 {
 public:
-  DynamicWindow(double dt, double horizon, double frequency, double acc_lim_x,
-                double acc_lim_y, double acc_lim_th, double max_vel_x, double min_vel_x,
-                double max_vel_y, double min_vel_y, double max_rot_vel,
+  DynamicWindow(const Collision& collision, double dt, double horizon, double frequency,
+                double acc_lim_x, double acc_lim_y, double acc_lim_th, double max_vel_x,
+                double min_vel_x, double max_vel_y, double min_vel_y, double max_rot_vel,
                 double min_rot_vel, unsigned int vx_samples, unsigned int vy_samples,
                 unsigned int vth_samples);
 
@@ -33,13 +33,13 @@ public:
    * @param vref - desired twist to follow [vx, vy, w]
    * @return twist
    */
-  vec control(const Collision& collision, const GridMap& grid, const vec& x0,
-              const vec& vb, const vec& vref);
+  vec control(const GridMap& grid, const vec& x0, const vec& vb, const vec& vref);
 
-  bool objective(double& loss, const Collision& collision, const GridMap& grid,
-                 const vec& x, const vec& vref, const vec& u);
+  bool objective(double& loss, const GridMap& grid, const vec& x, const vec& vref,
+                 const vec& u);
 
 private:
+  Collision collision_;                        // collision detection
   double dt_;                                  // time step in integration
   double horizon_;                             // control horizon
   double frequency_;                           // control loop frequency
@@ -50,6 +50,7 @@ private:
   unsigned int vx_samples_;   // number of velocity samples in x-direction
   unsigned int vy_samples_;   // number of velocity samples in y-direction
   unsigned int vth_samples_;  // number of angular velocity samples
+  unsigned int steps_;       //number of steps in each rollout
 };
 }  // namespace ergodic_exploration
 #endif
