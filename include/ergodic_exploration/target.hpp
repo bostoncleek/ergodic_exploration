@@ -39,19 +39,37 @@ struct Gaussian
     return std::exp(-0.5 * dot(diff.t() * cov_inv, diff));
   }
 
+  double operator()(const vec& pt, const vec& trans) const
+  {
+    if (any(mu - trans) < 0.0)
+    {
+      std::cout << "WARNING: Targert mean not within fourier domain" << std::endl;
+    }
+
+    // translate mu into frame of fourier domain
+    const vec diff = pt - (mu - trans);
+    return std::exp(-0.5 * dot(diff.t() * cov_inv, diff));
+  }
+
   vec mu;
   mat cov;
   mat cov_inv;
 };
 
-struct Target
+class Target
 {
 public:
+  Target();
+
   Target(const GaussianList& gaussians);
 
-  double evaluate(const vec& pt) const;
+  void addGaussian(const Gaussian& g);
 
-  void fill(vec& phi_vals, const mat& phi_grid) const;
+  void deleteGaussian(unsigned int idx);
+
+  double evaluate(const vec& pt, const vec& trans) const;
+
+  void fill(vec& phi_vals, const vec& trans, const mat& phi_grid) const;
 
   void markers(visualization_msgs::MarkerArray& marker_array, std::string frame) const;
 

@@ -16,25 +16,39 @@ using arma::distr_param;
 using arma::ivec;
 using arma::randi;
 
+Target::Target()
+{
+}
+
 Target::Target(const GaussianList& gaussians) : gaussians_(gaussians)
 {
 }
 
-double Target::evaluate(const vec& pt) const
+void Target::addGaussian(const Gaussian& g)
+{
+  gaussians_.emplace_back(g);
+}
+
+void Target::deleteGaussian(unsigned int idx)
+{
+  gaussians_.erase(gaussians_.begin() + idx);
+}
+
+double Target::evaluate(const vec& pt, const vec& trans) const
 {
   auto val = 0.0;
   for (const auto& gaussian : gaussians_)
   {
-    val += gaussian(pt);
+    val += gaussian(pt, trans);
   }
   return val;
 }
 
-void Target::fill(vec& phi_vals, const mat& phi_grid) const
+void Target::fill(vec& phi_vals, const vec& trans, const mat& phi_grid) const
 {
   for (unsigned int i = 0; i < phi_grid.n_cols; i++)
   {
-    phi_vals(i) = evaluate(phi_grid.col(i));
+    phi_vals(i) = evaluate(phi_grid.col(i), trans);
   }
 
   phi_vals /= sum(phi_vals);
