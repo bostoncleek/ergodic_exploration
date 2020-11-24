@@ -13,12 +13,13 @@
   <build_depend>roscpp</build_depend>
   <build_depend>sensor_msgs</build_depend>
   <build_depend>tf2</build_depend>
+  <build_depend>tf2_ros</build_depend>
   <build_depend>visualization_msgs</build_depend>
 
   <build_export_depend>roscpp</build_export_depend>
   <exec_depend>roscpp</exec_depend>
   <exec_depend>rviz</exec_depend>
-  <exec_depend>tf2_ros</exec_depend>
+  <!-- <exec_depend>tf2_ros</exec_depend> -->
 
   <test_depend>rosunit</test_depend>
 
