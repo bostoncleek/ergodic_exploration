@@ -113,7 +113,7 @@ void RungeKutta::solve(mat& xt, const ModelT& model, const vec& x0, const mat& u
 {
   // TODO: Add terminal x0?
   vec x = x0;
-  const auto steps = static_cast<unsigned int>(horizon / std::abs(dt_));
+  const auto steps = static_cast<unsigned int>(std::abs(horizon / dt_));
   xt.resize(x.n_rows, steps);
 
   for (unsigned int i = 0; i < steps; i++)
@@ -140,7 +140,7 @@ void RungeKutta::solve(mat& rhot, const CoStateFunc& func, const ModelT& model,
 {
   // TODO: Add terminal p(T)?
   vec rho = rhoT;
-  const auto steps = static_cast<unsigned int>(horizon / std::abs(dt_));
+  const auto steps = static_cast<unsigned int>(std::abs(horizon / dt_));
   rhot.resize(rho.n_rows, steps);
 
   // Iterate backwards
@@ -204,7 +204,7 @@ bool RungeKutta45::solve(mat& xt, const ModelT& model, const vec& x0, const mat&
   vec x = x0;
 
   // desired length of trajectory
-  const auto steps = static_cast<unsigned int>(horizon / std::abs(dt));
+  const auto steps = static_cast<unsigned int>(std::abs(horizon / dt));
   const vec tvec = linspace(0.0, horizon, steps);
 
   // allocate memory for trajectory based on max possible steps
@@ -334,7 +334,7 @@ bool RungeKutta45::solve(mat& rhot, const CoStateFunc& func, const ModelT& model
   vec rho = rhoT;
 
   // desired length of trajectory
-  const auto steps = static_cast<unsigned int>(horizon / std::abs(dt));
+  const auto steps = static_cast<unsigned int>(std::abs(horizon / dt));
   const vec tvec = linspace(0.0, horizon, steps);
 
   // allocate memory for trajectory based on max possible steps

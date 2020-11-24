@@ -22,6 +22,8 @@ Basis::Basis(double lx, double ly, unsigned int num_basis)
   , lamdak_(total_basis_)
   , k_(2, total_basis_)
 {
+  // TODO: add hk
+
   // basis numbers
   auto col = 0;
   for (unsigned int i = 0; i < num_basis; i++)
@@ -37,7 +39,7 @@ Basis::Basis(double lx, double ly, unsigned int num_basis)
 
   // TODO: verify norm on k
   // TODO: verify power on demoninator
-  // frequency coefficients weights}
+  // frequency coefficients weights
   for (unsigned int i = 0; i < total_basis_; i++)
   {
     lamdak_(i) = 1.0 / std::pow((1.0 + std::sqrt(sum(square(k_.col(i))))), 1.5);

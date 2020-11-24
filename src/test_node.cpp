@@ -120,12 +120,24 @@ int main(int argc, char** argv)
   // EC validation
   // const auto dt = 0.1;
   // const auto horizon = 0.5;
+
+  const auto max_vel_x = 1.0;
+  const auto min_vel_x = -1.0;
+
+  const auto max_vel_y = 1.0;
+  const auto min_vel_y = -1.0;
+
+  const auto max_rot_vel = 2.0;
+  const auto min_rot_vel = -2.0;
+
+  const vec umin = { min_vel_x, min_vel_y, min_rot_vel };
+  const vec umax = { max_vel_x, max_vel_y, max_rot_vel };
   //////////////////////////////////////////////////////////////////////////////
   // grid
-  const auto xmin = 0.0;
-  const auto xmax = 10.0;
-  const auto ymin = 0.0;
-  const auto ymax = 10.0;
+  const auto xmin = -5.0;
+  const auto xmax = 5.0;
+  const auto ymin = -5.0;
+  const auto ymax = 5.0;
   const auto resolution = 0.05;
   const auto xsize = ergodic_exploration::axis_length(xmin, xmax, resolution);
   const auto ysize = ergodic_exploration::axis_length(ymin, ymax, resolution);
@@ -165,7 +177,7 @@ int main(int argc, char** argv)
   R(2, 2) = .5;
 
   ErgodicControl ergodic_control(omni, collision, ec_dt, ec_horizon, target_resolution,
-                                 expl_weight, num_basis, buffer_size, batch_size, R);
+                                 expl_weight, num_basis, buffer_size, batch_size, R, umin, umax);
   //////////////////////////////////////////////////////////////////////////////
   // dwa
   // double dwa_dt = 0.1;
@@ -175,15 +187,6 @@ int main(int argc, char** argv)
   // double acc_lim_x = 1.0;
   // double acc_lim_y = 1.0;
   // double acc_lim_th = 2.0;
-  //
-  // double max_vel_x = 1.0;
-  // double min_vel_x = -1.0;
-  //
-  // double max_vel_y = 1.0;
-  // double min_vel_y = -1.0;
-  //
-  // double max_rot_vel = 1.0;
-  // double min_rot_vel = -1.0;
   //
   // unsigned int vx_samples = 5;
   // unsigned int vy_samples = 10;
@@ -195,11 +198,11 @@ int main(int argc, char** argv)
   //                                        vx_samples, vy_samples, vth_samples);
   //////////////////////////////////////////////////////////////////////////////
 
-  Gaussian g1({ 2.7, 2.7 }, { 1.4, 1.4 });
-  Gaussian g2({ 7.3, 7.3 }, { 1.4, 1.4 });
+  Gaussian g1({ 2.7 - 5.0, 2.7 - 5.0 }, { 1.4, 1.4 });
+  Gaussian g2({ 7.3 - 5.0, 7.3 - 5.0 }, { 1.4, 1.4 });
   Target target({ g1, g2 });
 
-  ergodic_control.configTarget(grid, target);
+  ergodic_control.setTarget(target);
 
   visualization_msgs::MarkerArray marker_array;
   target.markers(marker_array, "map");
@@ -207,7 +210,7 @@ int main(int argc, char** argv)
   map_pub.publish(grid_msg);
   target_pub.publish(marker_array);
 
-  vec x = { 0.2, 0.3, 0.0 };
+  vec x = { 0.2 - 5.0, 0.3 - 5.0, 0.0 };
   // vec x = { 0.3472, 0.3667, 0.0900 };
   // vec x = { 0.0, 0.0, 0.0 };
   vec u = { 1.0, 0.2, 0.1 };
@@ -293,7 +296,7 @@ int main(int argc, char** argv)
     u = ergodic_control.control(grid, x);
 
     // u = ergodic_control.control(collision, grid, target, x);
-    u.print("u_t:");
+    // u.print("u_t:");
 
     // if (!validateControl(omni, collision, grid, x, u, 0.1, 0.5))
     // {
