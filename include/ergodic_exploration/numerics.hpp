@@ -159,7 +159,7 @@ inline mat transform2dInv(const mat& trans2d)
  * @param x - current state [x, y, theta]
  * @param vb - current twist [vx, vy, w]
  * @param dt - time step
- * @return new pose [x, y, theta]
+ * @return transform from b to b' [dx, dy, dtheta]
  */
 inline vec integrate_twist(const vec& x, const vec& u, double dt)
 {
@@ -185,7 +185,7 @@ inline vec integrate_twist(const vec& x, const vec& u, double dt)
     dqb(2) = vb(2);
   }
 
-  return x + transform2d(x(2)) * dqb;
+  return transform2d(x(2)) * dqb;
 }
 
 /**
