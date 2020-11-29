@@ -22,12 +22,6 @@ using arma::span;
 using arma::vec;
 
 /**
- * @brief Function representing a dynamic system
- * @details xdot = f(x,u)
- */
-// typedef std::function<vec(const vec&, const vec&)> DynaFunc;
-
-/**
  * @brief Function representing the time derivatve of the co-state variable
  * @details inputs are co-state, ergodic measure derivatve, barrier derivatve,
  * and the jacobian of the dynamics w.r.t state
@@ -100,7 +94,7 @@ public:
            const mat& fdx);
 
 private:
-  double dt_;
+  double dt_; // time step 
 };
 
 RungeKutta::RungeKutta(double dt) : dt_(dt)
@@ -321,6 +315,7 @@ double RungeKutta45::step(vec& x_new, const ModelT& model, const vec& x, const v
   // std::cout << "error norm: " << norm(z - x_new, 2) << std::endl;
 
   return max(abs(z - x_new)) / h;
+  // return min(abs(z - x_new)) / h;
 }
 
 template <class ModelT>

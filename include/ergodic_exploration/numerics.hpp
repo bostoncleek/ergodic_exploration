@@ -8,6 +8,7 @@
 #define NUMERICS_HPP
 
 #include <cmath>
+#include <iostream>
 #include <algorithm>
 // #include <numbers>
 
@@ -50,7 +51,7 @@ inline double distance(double x0, double y0, double x1, double y1)
 
 /**
  * @brief Entropy of a single grid cell
- * @param prob_occu - probability grid cell is occupied represented as a decimal
+ * @param p - probability grid cell is occupied represented as a decimal
  * @return entropy
  */
 inline double entropy(double p)
@@ -61,6 +62,7 @@ inline double entropy(double p)
     return 1e-3;
   }
 
+  // unknowm: p = -1 => entropy(0.5) = 0.7
   else if (p < 0.0)
   {
     return 0.7;
