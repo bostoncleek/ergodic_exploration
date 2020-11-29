@@ -12,20 +12,6 @@
 
 namespace ergodic_exploration
 {
-/**
- * @brief Compose sqaured L2 norm between two points
- * @param x0 - starting x position
- * @param y0 - starting y position
- * @param x1 - ending x position
- * @param y1 - ending y position
- * @return sqaured L2 norm
- */
-inline int intDistSqaured(int x0, int y0, int x1, int y1)
-{
-  const auto dx = x1 - x0;
-  const auto dy = y1 - y0;
-  return dx * dx + dy * dy;
-}
 
 Collision::Collision(double boundary_radius, double search_radius,
                      double obstacle_threshold, double occupied_threshold)
@@ -206,8 +192,8 @@ bool Collision::checkCell(CollisionConfig& cfg, const GridMap& grid, unsigned in
   if (grid.gridBounds(ci, cj) && !(grid.getCell(ci, cj) < occupied_threshold_))
   {
     // squared distance circle center to obstacle
-    const auto sqrd_obs = intDistSqaured(cfg.cx, cfg.cy, cj, ci);
-
+    const auto sqrd_obs = (cfg.cx - cj)*(cfg.cx - cj) + (cfg.cy - ci)*(cfg.cy - ci) ;
+    
     // update smallest squared distance to obstacle
     if (sqrd_obs < cfg.sqrd_obs || cfg.sqrd_obs == -1)
     {
