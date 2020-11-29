@@ -86,9 +86,9 @@ void modelCallBack(const gazebo_msgs::ModelStates& msg)
     ctr++;
   }
 
-  pose(0) = msg.pose[robot_index].position.x;
-  pose(1) = msg.pose[robot_index].position.y;
-  pose(2) = tf2::getYaw(msg.pose[robot_index].orientation);
+  // pose(0) = msg.pose[robot_index].position.x;
+  // pose(1) = msg.pose[robot_index].position.y;
+  // pose(2) = tf2::getYaw(msg.pose[robot_index].orientation);
 
   // std::cout << "Pose gazebo: " << msg.pose[robot_index].position.x <<
   // " " << msg.pose[robot_index].position.y << " " <<
@@ -267,7 +267,6 @@ int main(int argc, char** argv)
   target.markers(marker_array, map_frame_id);
   target_pub.publish(marker_array);
 
-
   // // vec u = ergodic_control.control(collision, grid, target, pose);
   vec u = { 0.0, 0.0, 0.0 };
   // vec uref = { 0.7, 0.0, 0.0 };
@@ -281,22 +280,22 @@ int main(int argc, char** argv)
     ros::spinOnce();
 
     // Update pose
-    // try
-    // {
-    //   t_map_base = tfBuffer.lookupTransform(map_frame_id, base_frame_id, ros::Time(0));
-    //   pose(0) = t_map_base.transform.translation.x;
-    //   pose(1) = t_map_base.transform.translation.y;
-    //   pose(2) = tf2::getYaw(t_map_base.transform.rotation); // wrapped -PI to PI ?
-    //   pose_known = true;
-    // }
-    //
-    // catch (tf2::TransformException &ex)
-    // {
-    //   // ROS_WARN_NAMED(LOGNAME, "%s", ex.what());
-    //   continue;
-    // }
+    try
+    {
+      t_map_base = tfBuffer.lookupTransform(map_frame_id, base_frame_id, ros::Time(0));
+      pose(0) = t_map_base.transform.translation.x;
+      pose(1) = t_map_base.transform.translation.y;
+      pose(2) = tf2::getYaw(t_map_base.transform.rotation);  // wrapped -PI to PI ?
+      pose_known = true;
+    }
 
-    pose_known = true;
+    catch (tf2::TransformException& ex)
+    {
+      // ROS_WARN_NAMED(LOGNAME, "%s", ex.what());
+      continue;
+    }
+
+    // pose_known = true;
 
     // Contol loop
     if (map_received && pose_known)
@@ -319,6 +318,8 @@ int main(int argc, char** argv)
       if (!validate_control(collision, grid, pose, u, val_dt, val_horizon))
       {
         ROS_INFO_STREAM_NAMED(LOGNAME, "Collision detected! Enabling DWA!");
+
+        // If dwa fails twist is set to zeros
         u = dwa.control(grid, pose, vb, u);
       }
 
