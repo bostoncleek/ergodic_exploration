@@ -1,0 +1,80 @@
+## common control
+# holonomic: vehicle is holonomic
+# frequency: control loop frequency (Hz)
+# val_dt: ergodic control validation time step for collision detection (s)
+# val_horizon: ergodic control validation horizon for collision detection (s)
+# max_vel_x: max x velcocity (m/s)
+# max_vel_y: max y velcocity (m/s)
+# max_rot_vel: max ratotional velcocity (m/s)
+# min_vel_x: min x velcocity (m/s)
+# min_vel_y: min y velcocity (m/s)
+# min_rot_vel: max ratotional velcocity (m/s)
+# acc_lim_x: x acceleration limit (m/s^2)
+# acc_lim_y: y acceleration limit (m/s^2)
+# acc_lim_th: : rotational acceleration limit (m/s^2)
+holonomic: true
+frequency: 10.0
+val_dt: 0.1
+val_horizon: 0.5
+
+max_vel_x: 1.0
+max_vel_y: 1.0
+max_rot_vel: 2.0
+
+min_vel_x: -1.0
+min_vel_y: -1.0
+min_rot_vel: -2.0
+
+acc_lim_x: 2.5
+acc_lim_y: 2.5
+acc_lim_th: 1.0
+
+## collision detection
+# boundary_radius: bounding radius around robot (m)
+# search_radius: max search radius for collision detection (m)
+# obstacle_threshold: obstacles within radius from boundary are cosidered collisions (m)
+# occupied_threshold: occupancy grid cell probability to be considered an obstacle [0 1]
+boundary_radius: 0.7
+search_radius: 1.0
+obstacle_threshold: 0.2
+occupied_threshold: 0.8
+
+## ergodic control
+# ec_dt: time step used in integration (s)
+# ec_horizon: control horizon (s)
+# target_resolution: target grid resolution (m)
+# expl_weight: ergodic exploration weight
+# num_basis: number of basis functions
+# buffer_size: total number of past states stored
+# batch_size: number of past states randomly sampled in each control loop
+# control_weights: weights on twist [vx vy w]
+ec_dt: 0.1
+ec_horizon: 8.0
+target_resolution: 0.1
+expl_weight: 1.0
+num_basis: 10
+buffer_size: 1000000
+batch_size: 100
+control_weights: [1.0, 1.0, 0.5]
+
+## dynamic window
+# dwa_dt: time step used in integration (s)
+# dwa_horizon: control horizon (s)
+# acc_dt: time step the acceleration limits are applied (s)
+# vx_samples: number of x velcocity samples
+# vy_samples: number of y velcocity samples
+# vth_samples: number of rotational velcocity samples
+dwa_dt: 0.1
+dwa_horizon: 1.5
+acc_dt: 0.2
+vx_samples: 3
+vy_samples: 8
+vth_samples: 5
+
+## targets
+# means: x and y means (m)
+# sigmas: x and y standard deviations (m)
+# means: [[2.5, 2.5], [8.5, 2.5], [-5.0, 8.0]]
+# sigmas: [[1.5, 1.5], [1.5, 1.5], [1.5, 1.5]]
+means: [[2.5, 2.5], [8.5, 2.5]]
+sigmas: [[1.5, 1.5], [1.5, 1.5]]

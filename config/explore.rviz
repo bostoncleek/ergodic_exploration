@@ -6,7 +6,6 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /RobotModel1
         - /TF1/Frames1
         - /Path1/Offset1
       Splitter Ratio: 0.5617647171020508
@@ -107,65 +106,65 @@ Visualization Manager:
       Frames:
         All Enabled: false
         axle_link:
-          Value: false
+          Value: true
         base_link:
-          Value: false
+          Value: true
         bb2_left_optical_link:
-          Value: false
+          Value: true
         bb2_mesh:
-          Value: false
+          Value: true
         bb2_optical_link:
-          Value: false
+          Value: true
         bb2_origin:
-          Value: false
+          Value: true
         chassis_link:
-          Value: false
+          Value: true
         controller_enclosure:
-          Value: false
+          Value: true
         front_cover_link:
-          Value: false
+          Value: true
         front_laser:
-          Value: false
+          Value: true
         front_left_wheel_link:
-          Value: false
+          Value: true
         front_lights_link:
-          Value: false
+          Value: true
         front_right_wheel_link:
-          Value: false
+          Value: true
         front_rocker_link:
-          Value: false
+          Value: true
         imu_link:
-          Value: false
+          Value: true
         left_side_cover_link:
-          Value: false
+          Value: true
         map:
           Value: true
         mid_mount:
-          Value: false
+          Value: true
         mount_link:
-          Value: false
+          Value: true
         odom:
           Value: true
         rear_cover_link:
-          Value: false
+          Value: true
         rear_laser:
-          Value: false
+          Value: true
         rear_left_wheel_link:
-          Value: false
+          Value: true
         rear_lights_link:
-          Value: false
+          Value: true
         rear_right_wheel_link:
-          Value: false
+          Value: true
         rear_rocker_link:
-          Value: false
+          Value: true
         right_side_cover_link:
-          Value: false
+          Value: true
         top_link:
-          Value: false
+          Value: true
         velodyne_mesh:
-          Value: false
+          Value: true
         velodyne_scan:
-          Value: false
+          Value: true
       Marker Alpha: 1
       Marker Scale: 1
       Name: TF
@@ -287,7 +286,7 @@ Visualization Manager:
       Marker Topic: /samples
       Name: Marker
       Namespaces:
-        "": true
+        {}
       Queue Size: 100
       Value: true
   Enabled: true
@@ -318,7 +317,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 16.464481353759766
+      Distance: 13.422952651977539
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -326,17 +325,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 5.001781463623047
-        Y: 2.882159471511841
-        Z: 4.860561847686768
+        X: 0.8200240135192871
+        Y: 1.8414379358291626
+        Z: 4.8658671379089355
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.5647963285446167
+      Pitch: 1.5697963237762451
       Target Frame: <Fixed Frame>
-      Yaw: 6.220436096191406
+      Yaw: 6.250436782836914
     Saved: ~
 Window Geometry:
   Displays:
