@@ -76,12 +76,16 @@ public:
   /**
    * @brief Constructor
    * @param model - robot's dynamic model
+   * @param collision - collision detector
    * @param dt - time step in integration
    * @param horizon - control horizon
-   * @param num_samples - samples drawn from map
-   * @param buffer_size - past states in memory
-   * @param batch_size - states sampled from memory
+   * @param resolution - discretization of target grid
+   * @param num_basis - number of cosine basis functions per dimension
+   * @param buffer_size - number of past states in memory
+   * @param batch_size - number of states sampled from memory
    * @param R - positive definite matrix that penalizes controls
+   * @param umin - body twist lower limits
+   * @param umax - body twist upper limits
    */
   ErgodicControl(const ModelT& model, const Collision& collision, double dt,
                  double horizon, double resolution, double exploration_weight,
@@ -91,28 +95,41 @@ public:
    * @brief Update the control signal
    * @param grid - grid map
    * @param x - current state [x, y, theta]
-   * @return first twist in the updated control signal
+   * @return first twist in the updated control signal [vx, vy, w]
    */
   vec control(const GridMap& grid, const vec& x);
 
+  /**
+   * @brief Previous optimized trajectory
+   * @param path - trajectory
+   * @param frame - trajectory frame
+   */
   void path(nav_msgs::Path& path, std::string frame) const;
 
+  /**
+   * @brief Set the target distribution
+   * @param target - target distribution
+   */
   void setTarget(const Target& target);
 
+  /**
+   * @brief Compose target distribution grid and spatial coefficients
+   * @param grid - grid map
+   * @details Updates the spatial coefficients if the map is larger than before
+   */
   void configTarget(const GridMap& grid);
 
 private:
-
   /**
    * @brief Compose the gradient of the ergodic metric
-   * @param xt - predicted trajectory
+   * @param xt - forward simulated trajectory in fourier domain
    * @details Updates a matrix containing ergodic metric gradient for each state in xt
    */
   void gradErgodicMetric(const mat& xt);
 
   /**
    * @brief Update the control signal
-   * @param xt - predicted trajectory
+   * @param xt - forward simulated trajectory in fourier domain
    * @param rhot - co-state variable solution
    * @details rhot is assumed to already be sorted from [t0 tf] with t0 at index 0
    */
@@ -120,7 +137,7 @@ private:
 
   /**
    * @brief Gradient of the barrier function to obstacles of the form (x-b)*(x-b)
-   * @param xt - predicted trajectory in fourier domain
+   * @param xt - forward simulated trajectory in fourier domain
    * @details Updates a matrix conatining the barrier function derivatve
    * for each state in xt
    */
@@ -167,7 +184,7 @@ ErgodicControl<ModelT>::ErgodicControl(const ModelT& model, const Collision& col
   , expl_weight_(exploration_weight)
   , steps_(static_cast<unsigned int>(std::abs(horizon / dt)))
   , Rinv_(inv(R))
-  , ut_(3, steps_, arma::fill::zeros) // body twist Vb = [vx, vy, w]
+  , ut_(3, steps_, arma::fill::zeros)                   // body twist Vb = [vx, vy, w]
   , edx_(model.state_space, steps_, arma::fill::zeros)  // set heading column to zeros
   , bdx_(model.state_space, steps_, arma::fill::zeros)  // set heading column to zeros
   , traj_(model.state_space, steps_)
@@ -421,8 +438,8 @@ void ErgodicControl<ModelT>::barrier(const mat& xt)
   {
     vec dbar(2, arma::fill::zeros);
 
-    dbar(0) += 2.0 * (xt(0, i) >  basis_.lx_ - eps) * (xt(0, i) -  (basis_.lx_ - eps));
-    dbar(1) += 2.0 * (xt(1, i) >  basis_.ly_ - eps) * (xt(1, i) -  (basis_.ly_ - eps));
+    dbar(0) += 2.0 * (xt(0, i) > basis_.lx_ - eps) * (xt(0, i) - (basis_.lx_ - eps));
+    dbar(1) += 2.0 * (xt(1, i) > basis_.ly_ - eps) * (xt(1, i) - (basis_.ly_ - eps));
 
     dbar(0) += 2.0 * (xt(0, i) < eps) * (xt(0, i) - eps);
     dbar(1) += 2.0 * (xt(1, i) < eps) * (xt(1, i) - eps);

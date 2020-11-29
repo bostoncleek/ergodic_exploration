@@ -85,16 +85,15 @@ public:
    * @param dbar - derivatve of barrier function for a state
    * @param fdx - jacobian of the model with respect to the control
    * @return co-state variable
-   * @details The robot model is used to compose A = D1[f(x,u)]. The collision
-   * detector composes the boundary derivatives (db/dx), collision derivatives (dc/dx),
-   * and range finder collisions (dr/dx). The columns of xt, ut, and edx correspond to
+   * @details The robot model is used to compose A = D1[f(x,u)].
+   * The columns of xt, ut, and edx correspond to
    * the state, control, or derivative at a given time.
    */
   vec step(const CoStateFunc& func, const vec& rho, const vec& gdx, const vec& dbar,
            const mat& fdx);
 
 private:
-  double dt_; // time step 
+  double dt_;  // time step
 };
 
 RungeKutta::RungeKutta(double dt) : dt_(dt)

@@ -21,24 +21,42 @@ using arma::vec;
 struct Gaussian;
 typedef std::vector<Gaussian> GaussianList;
 
+/** @brief 2D gaussian */
 struct Gaussian
 {
+  /** @brief Constructor */
   Gaussian()
   {
   }
 
+  /**
+   * @brief Constructor
+   * @param mu - mean [mean x, mean y]
+   * @param sigmas - standard deviations [sigma x, sigma y]
+   */
   Gaussian(const vec& mu, const vec& sigmas)
     : mu(mu), cov(arma::diagmat(square(sigmas))), cov_inv(inv(cov))
   {
   }
 
+  /**
+   * @brief Evaluate gaussian
+   * @param pt - point [x y]
+   * @return evaluated gaussian at pt
+   */
   double operator()(const vec& pt) const
   {
-    // TODO: include 1/(2pi * sqrt(det(cov))) ????
     const vec diff = pt - mu;
     return std::exp(-0.5 * dot(diff.t() * cov_inv, diff));
   }
 
+  /**
+   * @brief Evaluate gaussian
+   * @param pt - point [x y]
+   * @param trans - translation from map frame to fourier domain
+   * @return evaluated gaussian at pt translated by trans
+   * @details the translation is used to translate the mean into the fourier domain
+   */
   double operator()(const vec& pt, const vec& trans) const
   {
     // DEBUG
@@ -52,30 +70,63 @@ struct Gaussian
     return std::exp(-0.5 * dot(diff.t() * cov_inv, diff));
   }
 
-  vec mu;
-  mat cov;
-  mat cov_inv;
+  vec mu;       // mean
+  mat cov;      // covariance
+  mat cov_inv;  // inverse of covariance
 };
 
+/** @brief Target distribution */
 class Target
 {
 public:
+  /** @brief Constructor */
   Target();
 
+  /**
+   * @brief Constructor
+   * @param gaussians - list of target gaussians
+   */
   Target(const GaussianList& gaussians);
 
+  /**
+   * @brief Adds gaussian to list
+   * @param g - gaussians
+   */
   void addGaussian(const Gaussian& g);
 
+  /**
+   * @brief Remove gaussian from list
+   * @param idx - index of gaussian to remove
+   */
   void deleteGaussian(unsigned int idx);
 
+  /**
+   * @brief Evaluate the list of gaussians
+   * @param pt - point [x y]
+   * @param trans - translation from map frame to fourier domain
+   * @return value of the list of gaussians evaluated at pt translated by trans
+   * @details the translation is used to translate the mean into the fourier domain
+   */
   double evaluate(const vec& pt, const vec& trans) const;
 
+  /**
+   * @brief Evaluate the target distribution
+   * @param phi_vals[out] - target evaluated at each grid cell in phi_grid
+   * @param trans - translation from map frame to fourier domain
+   * @param phi_grid - discretization of fourier domain
+   * @details the translation is used to translate the mean into the fourier domain
+   */
   void fill(vec& phi_vals, const vec& trans, const mat& phi_grid) const;
 
+  /**
+   * @brief Visualize target distribution
+   * @param marker_array - each target is visualized as an ellipse
+   * @param frame - target frame
+   */
   void markers(visualization_msgs::MarkerArray& marker_array, std::string frame) const;
 
 private:
-  GaussianList gaussians_;
+  GaussianList gaussians_;  // list of target gaussians
 };
 
 }  // namespace ergodic_exploration
