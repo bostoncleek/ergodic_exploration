@@ -18,7 +18,7 @@ namespace ergodic_exploration
 class DynamicWindow
 {
 public:
-  DynamicWindow(const Collision& collision, double dt, double horizon, double frequency,
+  DynamicWindow(const Collision& collision, double dt, double horizon, double acc_dt,
                 double acc_lim_x, double acc_lim_y, double acc_lim_th, double max_vel_x,
                 double min_vel_x, double max_vel_y, double min_vel_y, double max_rot_vel,
                 double min_rot_vel, unsigned int vx_samples, unsigned int vy_samples,
@@ -42,7 +42,7 @@ private:
   Collision collision_;                        // collision detection
   double dt_;                                  // time step in integration
   double horizon_;                             // control horizon
-  double frequency_;                           // control loop frequency
+  double acc_dt_;                              // time acceleration limit is applied
   double acc_lim_x_, acc_lim_y_, acc_lim_th_;  // acceleration limits
   double max_vel_x_, min_vel_x_;               // velocity limits in x-direction
   double max_vel_y_, min_vel_y_;               // velocity limits in y-direction
@@ -50,7 +50,7 @@ private:
   unsigned int vx_samples_;   // number of velocity samples in x-direction
   unsigned int vy_samples_;   // number of velocity samples in y-direction
   unsigned int vth_samples_;  // number of angular velocity samples
-  unsigned int steps_;       //number of steps in each rollout
+  unsigned int steps_;        // number of steps in each rollout
 };
 }  // namespace ergodic_exploration
 #endif

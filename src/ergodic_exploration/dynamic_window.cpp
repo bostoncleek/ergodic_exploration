@@ -11,7 +11,7 @@
 namespace ergodic_exploration
 {
 DynamicWindow::DynamicWindow(const Collision& collision, double dt, double horizon,
-                             double frequency, double acc_lim_x, double acc_lim_y,
+                             double acc_dt, double acc_lim_x, double acc_lim_y,
                              double acc_lim_th, double max_vel_x, double min_vel_x,
                              double max_vel_y, double min_vel_y, double max_rot_vel,
                              double min_rot_vel, unsigned int vx_samples,
@@ -19,7 +19,7 @@ DynamicWindow::DynamicWindow(const Collision& collision, double dt, double horiz
   : collision_(collision)
   , dt_(dt)
   , horizon_(horizon)
-  , frequency_(frequency)
+  , acc_dt_(acc_dt)
   , acc_lim_x_(acc_lim_x)
   , acc_lim_y_(acc_lim_y)
   , acc_lim_th_(acc_lim_th)
@@ -34,36 +34,66 @@ DynamicWindow::DynamicWindow(const Collision& collision, double dt, double horiz
   , vth_samples_(vth_samples)
   , steps_(static_cast<unsigned int>(std::abs(horizon / dt)))
 {
+  if (vx_samples_ == 0)
+  {
+    std::cout << "vx samples set to 0 but need at least 1... setting this to 1" << std::endl;
+    vx_samples_ = 1;
+  }
+
+  if (vy_samples_ == 0)
+  {
+    std::cout << "vy samples set to 0 but need at least 1... setting this to 1" << std::endl;
+    vy_samples_ = 1;
+  }
+
+  if (vth_samples_ == 0)
+  {
+    std::cout << "vth samples set to 0 but need at least 1... setting this to 1" << std::endl;
+    vth_samples_ = 1;
+  }
 }
 
 vec DynamicWindow::control(const GridMap& grid, const vec& x, const vec& vb,
                            const vec& vref)
 {
-  const auto cntrl_dt = 1.0 / frequency_;
-  // const auto cntrl_dt = 0.5;
-  // const auto cntrl_dt = 1.0/ 10.0;
+  const auto vdx_low = std::max(vb(0) - acc_lim_x_ * acc_dt_, min_vel_x_);
+  const auto vdx_high = std::min(vb(0) + acc_lim_x_ * acc_dt_, max_vel_x_);
 
-  const auto vdx_low = std::max(vb(0) - acc_lim_x_ * cntrl_dt, min_vel_x_);
-  const auto vdx_high = std::min(vb(0) + acc_lim_x_ * cntrl_dt, max_vel_x_);
+  const auto vdy_low = std::max(vb(1) - acc_lim_y_ * acc_dt_, min_vel_y_);
+  const auto vdy_high = std::min(vb(1) + acc_lim_y_ * acc_dt_, max_vel_y_);
 
-  const auto vdy_low = std::max(vb(1) - acc_lim_y_ * cntrl_dt, min_vel_y_);
-  const auto vdy_high = std::min(vb(1) + acc_lim_y_ * cntrl_dt, max_vel_y_);
-
-  const auto wd_low = std::max(vb(2) - acc_lim_th_ * cntrl_dt, min_rot_vel_);
-  const auto wd_high = std::min(vb(2) + acc_lim_th_ * cntrl_dt, max_rot_vel_);
+  const auto wd_low = std::max(vb(2) - acc_lim_th_ * acc_dt_, min_rot_vel_);
+  const auto wd_high = std::min(vb(2) + acc_lim_th_ * acc_dt_, max_rot_vel_);
 
   // std::cout << "Window " << std::endl;
   // std::cout << "vx: [ " << vdx_low << ", " << vdx_high << " ]" << std::endl;
   // std::cout << "vy: [ " << vdy_low << ", " << vdy_high << " ]" << std::endl;
   // std::cout << "w: [ " << wd_low << ", " << wd_high << " ]" << std::endl;
 
-  // TODO: make sure no division by 0
-  const auto dvx = (vdx_high - vdx_low) / static_cast<double>(vx_samples_ - 1);
-  const auto dvy = (vdy_high - vdy_low) / static_cast<double>(vy_samples_ - 1);
-  const auto dw = (wd_high - wd_low) / static_cast<double>(vth_samples_ - 1);
+  auto dvx = 0.0;
+  auto dvy = 0.0;
+  auto dw = 0.0;
 
-  // // number of steps in each rollout
-  // const auto steps = static_cast<unsigned int>(horizon_ / dt_);
+  if (vx_samples_ > 1)
+  {
+    dvx = (vdx_high - vdx_low) / static_cast<double>(vx_samples_ - 1);
+  }
+
+  if (vy_samples_ > 1)
+  {
+    dvy = (vdy_high - vdy_low) / static_cast<double>(vy_samples_ - 1);
+  }
+
+  if (vth_samples_ > 1)
+  {
+    dw = (wd_high - wd_low) / static_cast<double>(vth_samples_ - 1);
+  }
+
+
+  // TODO: make sure no division by 0
+  // const auto dvx = (vdx_high - vdx_low) / static_cast<double>(vx_samples_ - 1);
+  // const auto dvy = (vdy_high - vdy_low) / static_cast<double>(vy_samples_ - 1);
+  // const auto dw = (wd_high - wd_low) / static_cast<double>(vth_samples_ - 1);
 
   // std::cout << "Window discretization " << std::endl;
   // std::cout << "dvx: " << dvx << std::endl;
@@ -89,6 +119,8 @@ vec DynamicWindow::control(const GridMap& grid, const vec& x, const vec& vb,
         u(0) = vx;
         u(1) = vy;
         u(2) = w;
+
+        // u.print("u tests");
 
         auto cost = 0.0;
         if (!objective(cost, grid, x, vref, u))
