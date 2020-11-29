@@ -106,13 +106,13 @@ struct Cart
     return (wheel_radius / 2.0) * B;
   }
 
-  double wheel_radius;        // radius of wheel
-  double wheel_base;          // distance from robot center to wheel center
-  unsigned int state_space;   // states space dimension
+  double wheel_radius;       // radius of wheel
+  double wheel_base;         // distance from robot center to wheel center
+  unsigned int state_space;  // states space dimension
 };
 
 /**
- * @brief Kinematic model of 2 wheel differential drive robot
+ * @brief Kinematic model of a wheeled differential drive robot
  * @details The state is [x, y, theta] and controls are the linear and
  * angular velocities [vx, vy, w] (body twist)
  */
@@ -169,7 +169,7 @@ struct SimpleCart
     return B;
   }
 
-  unsigned int state_space;   // states space dimension
+  unsigned int state_space;  // states space dimension
 };
 }  // namespace ergodic_exploration
 #endif

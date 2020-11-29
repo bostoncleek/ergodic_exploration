@@ -115,10 +115,10 @@ struct Mecanum
     return B;
   }
 
-  double wheel_radius;        // radius of wheel
-  double wheel_base_x;        // distance from chassis center to wheel center along x-axis
-  double wheel_base_y;        // distance from chassis center to wheel center along y-axis
-  unsigned int state_space;   // states space dimension
+  double wheel_radius;       // radius of wheel
+  double wheel_base_x;       // distance from chassis center to wheel center along x-axis
+  double wheel_base_y;       // distance from chassis center to wheel center along y-axis
+  unsigned int state_space;  // states space dimension
 };
 
 /**
@@ -173,7 +173,7 @@ struct Omni
     return B;
   }
 
-  unsigned int state_space;   // states space dimension
+  unsigned int state_space;  // states space dimension
 };
 }  // namespace ergodic_exploration
 #endif
