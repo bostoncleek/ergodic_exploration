@@ -36,19 +36,22 @@ DynamicWindow::DynamicWindow(const Collision& collision, double dt, double horiz
 {
   if (vx_samples_ == 0)
   {
-    std::cout << "vx samples set to 0 but need at least 1... setting this to 1" << std::endl;
+    std::cout << "vx samples set to 0 but need at least 1... setting this to 1"
+              << std::endl;
     vx_samples_ = 1;
   }
 
   if (vy_samples_ == 0)
   {
-    std::cout << "vy samples set to 0 but need at least 1... setting this to 1" << std::endl;
+    std::cout << "vy samples set to 0 but need at least 1... setting this to 1"
+              << std::endl;
     vy_samples_ = 1;
   }
 
   if (vth_samples_ == 0)
   {
-    std::cout << "vth samples set to 0 but need at least 1... setting this to 1" << std::endl;
+    std::cout << "vth samples set to 0 but need at least 1... setting this to 1"
+              << std::endl;
     vth_samples_ = 1;
   }
 }
@@ -89,7 +92,6 @@ vec DynamicWindow::control(const GridMap& grid, const vec& x, const vec& vb,
     dw = (wd_high - wd_low) / static_cast<double>(vth_samples_ - 1);
   }
 
-
   // TODO: make sure no division by 0
   // const auto dvx = (vdx_high - vdx_low) / static_cast<double>(vx_samples_ - 1);
   // const auto dvy = (vdy_high - vdy_low) / static_cast<double>(vy_samples_ - 1);
@@ -101,11 +103,11 @@ vec DynamicWindow::control(const GridMap& grid, const vec& x, const vec& vb,
   // std::cout << "dw: " << dw << std::endl;
 
   // Search velocity space
-  vec u_opt(3, arma::fill::zeros);
   auto min_cost = std::numeric_limits<double>::max();
 
   bool soln_found = false;
 
+  vec u_opt(3, arma::fill::zeros);
   vec u(3);
   auto vx = vdx_low;
   for (unsigned int i = 0; i < vx_samples_; i++)
@@ -152,7 +154,7 @@ vec DynamicWindow::control(const GridMap& grid, const vec& x, const vec& vb,
   return u_opt;
 }
 
-bool DynamicWindow::objective(double& loss, const GridMap& grid, const vec& x,
+bool DynamicWindow::objective(double& cost, const GridMap& grid, const vec& x,
                               const vec& vref, const vec& u)
 {
   vec pose = x;
@@ -168,12 +170,12 @@ bool DynamicWindow::objective(double& loss, const GridMap& grid, const vec& x,
       return true;
     }
 
-    loss += (1.0 / dmin);
+    cost += (1.0 / dmin);
   }
 
   // control error;
   const vec cntrl_error = vref - u;
-  loss += dot(cntrl_error, cntrl_error);
+  cost += dot(cntrl_error, cntrl_error);
 
   // const auto v_trans =
   //     std::sqrt(max_vel_x_ * max_vel_x_ + max_vel_y_ * max_vel_y_);
