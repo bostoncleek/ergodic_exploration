@@ -2,15 +2,13 @@
  * @file omni.hpp
  * @author Boston Cleek
  * @date 30 Oct 2020
- * @brief Kinematic 4 wheel omni directional robot
+ * @brief Kinematic omni directional models control wheel velocities or body twist
  */
 #ifndef OMNI_HPP
 #define OMNI_HPP
 
 #include <cmath>
 #include <armadillo>
-
-#include <ergodic_exploration/types.hpp>
 
 namespace ergodic_exploration
 {
@@ -35,7 +33,6 @@ struct Mecanum
     : wheel_radius(wheel_radius)
     , wheel_base_x(wheel_base_x)
     , wheel_base_y(wheel_base_y)
-    , action_space(4)
     , state_space(3)
   {
   }
@@ -45,16 +42,16 @@ struct Mecanum
    * @param u - control [u0, u1, u2, u3]
    * @return twist in body frame Vb = [vx, vy, w]
    */
-  Twist2D wheels2Twist(const vec u) const
+  vec wheels2Twist(const vec u) const
   {
     const auto l = 1.0 / (wheel_base_x + wheel_base_y);
 
     // pseudo inverse of jacobian matrix
     const mat Hp = { { 1.0, 1.0, 1.0, 1.0 }, { -1.0, 1.0, -1.0, 1.0 }, { -l, l, l, -l } };
 
-    const vec v = (wheel_radius / 4.0) * Hp * u;
+    const vec vb = (wheel_radius / 4.0) * Hp * u;
 
-    return { v(0), v(1), v(2) };
+    return { vb(0), vb(1), vb(2) };
   }
 
   /**
@@ -121,7 +118,6 @@ struct Mecanum
   double wheel_radius;        // radius of wheel
   double wheel_base_x;        // distance from chassis center to wheel center along x-axis
   double wheel_base_y;        // distance from chassis center to wheel center along y-axis
-  unsigned int action_space;  // control space dimension
   unsigned int state_space;   // states space dimension
 };
 
@@ -133,7 +129,7 @@ struct Mecanum
 struct Omni
 {
   /** @brief Constructor */
-  Omni() : action_space(3), state_space(3)
+  Omni() : state_space(3)
   {
   }
 
@@ -177,7 +173,6 @@ struct Omni
     return B;
   }
 
-  unsigned int action_space;  // control space dimension
   unsigned int state_space;   // states space dimension
 };
 }  // namespace ergodic_exploration

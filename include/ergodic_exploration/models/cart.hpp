@@ -2,15 +2,17 @@
  * @file cart.hpp
  * @author Boston Cleek
  * @date 28 Oct 2020
- * @brief Kinematic 2 wheel cart
+ * @brief Kinematic cart models control wheel velocities or body twist
  */
 #ifndef CART_HPP
 #define CART_HPP
 
 #include <cmath>
+#include <stdexcept>
+
 #include <armadillo>
 
-#include <ergodic_exploration/types.hpp>
+#include <ergodic_exploration/numerics.hpp>
 
 namespace ergodic_exploration
 {
@@ -31,7 +33,7 @@ struct Cart
    * center of a wheel
    */
   Cart(double wheel_radius, double wheel_base)
-    : wheel_radius(wheel_radius), wheel_base(wheel_base), action_space(2), state_space(3)
+    : wheel_radius(wheel_radius), wheel_base(wheel_base), state_space(3)
   {
   }
 
@@ -40,7 +42,7 @@ struct Cart
    * @param u - control [u0, u1]
    * @return twist in body frame Vb = [vx, vy, w]
    */
-  Twist2D wheels2Twist(const vec u) const
+  vec wheels2Twist(const vec u) const
   {
     const double vx = wheel_radius / 2.0 * (u(0) + u(1));
     const double w = wheel_radius / (2.0 * wheel_base) * (u(1) - u(0));
@@ -106,37 +108,41 @@ struct Cart
 
   double wheel_radius;        // radius of wheel
   double wheel_base;          // distance from robot center to wheel center
-  unsigned int action_space;  // control space dimension
   unsigned int state_space;   // states space dimension
 };
 
 /**
  * @brief Kinematic model of 2 wheel differential drive robot
  * @details The state is [x, y, theta] and controls are the linear and
- * angular velocities [v, w] (body twist)
+ * angular velocities [vx, vy, w] (body twist)
  */
 struct SimpleCart
 {
   /** @brief Constructor */
-  SimpleCart() : action_space(2), state_space(3)
+  SimpleCart() : state_space(3)
   {
   }
 
   /**
    * @brief Kinematic model of a 2 wheel differential drive robot
    * @param x - state [x, y, theta]
-   * @param u - control [v, w]
+   * @param u - body twist control [vx, vy, w]
    * @return xdot = f(x,u)
    */
   vec operator()(const vec x, const vec u) const
   {
-    return { u(0) * std::cos(x(2)), u(0) * std::sin(x(2)), u(1) };
+    if (!almost_equal(u(1), 0.0))
+    {
+      throw std::invalid_argument("Invalid twist y-velocity must be 0.");
+    }
+
+    return { u(0) * std::cos(x(2)), u(0) * std::sin(x(2)), u(2) };
   }
 
   /**
    * @brief Jacobian of the model with respect to the state
    * @param x - state [x, y, theta]
-   * @param u - control [v, w]
+   * @param u - body twist control [vx, vy, w]
    * @return A = D1(f(x,u)) of shape (3x3)
    */
   mat fdx(const vec x, const vec u) const
@@ -150,20 +156,19 @@ struct SimpleCart
   /**
    * @brief Jacobian of the model with respect to the control
    * @param x - state [x, y, theta]
-   * @return B = D2(f(x,u)) of shape (3x2)
+   * @return B = D2(f(x,u)) of shape (3x3)
    */
   mat fdu(const vec x) const
   {
-    mat B(3, 2, arma::fill::zeros);
+    mat B(3, 3, arma::fill::zeros);
 
     B(0, 0) = std::cos(x(2));
     B(1, 0) = std::sin(x(2));
-    B(2, 1) = 1.0;
+    B(2, 2) = 1.0;
 
     return B;
   }
 
-  unsigned int action_space;  // control space dimension
   unsigned int state_space;   // states space dimension
 };
 }  // namespace ergodic_exploration

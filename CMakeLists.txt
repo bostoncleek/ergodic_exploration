@@ -83,10 +83,10 @@ include
 
 # Declare a C++ library
 add_library(${PROJECT_NAME}
-	include/${PROJECT_NAME}/cart.hpp
 	include/${PROJECT_NAME}/ergodic_control.hpp
 	include/${PROJECT_NAME}/integrator.hpp
-	include/${PROJECT_NAME}/omni.hpp
+	include/${PROJECT_NAME}/models/cart.hpp
+	include/${PROJECT_NAME}/models/omni.hpp
 	src/${PROJECT_NAME}/basis.cpp
 	src/${PROJECT_NAME}/buffer.cpp
 	src/${PROJECT_NAME}/collision.cpp
@@ -95,7 +95,6 @@ add_library(${PROJECT_NAME}
 	src/${PROJECT_NAME}/mapping.cpp
 	src/${PROJECT_NAME}/numerics.cpp
 	src/${PROJECT_NAME}/target.cpp
-	src/${PROJECT_NAME}/types.cpp
 	# src/${PROJECT_NAME}/ergodic_exploration.cpp
 )
 
