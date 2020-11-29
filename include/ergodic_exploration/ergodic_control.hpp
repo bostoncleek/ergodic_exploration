@@ -24,6 +24,37 @@ namespace ergodic_exploration
 using arma::span;
 
 /**
+ * @brief Determine if control will cause a collision
+ * @param collision - collision detector
+ * @param grid - grid map
+ * @param x0 - initial state
+ * @param u - twist [vx, vy, w]
+ * @param dt - time step in integration
+ * @param horizon - length of integration
+ * @return true if the control is collision free
+ * @details The control is assumed to be constant and a twist is
+ * integrated for a fixed amout of time
+ */
+inline bool validate_control(const Collision& collision, const GridMap& grid,
+                             const vec& x0, const vec& u, double dt, double horizon)
+{
+  vec x = x0;
+  const vec delta = integrate_twist(x, u, dt);
+  const auto steps = static_cast<unsigned int>(std::abs(horizon / dt));
+
+  for (unsigned int i = 0; i < steps; i++)
+  {
+    x += delta;
+    if (collision.collisionCheck(grid, x))
+    {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
  * @brief Time derivatve of the co-state variable
  * @param rho - co-state variable
  * @param gdx - gradient of the ergodic metric
@@ -33,8 +64,8 @@ using arma::span;
  */
 inline vec rhodot(const vec& rho, const vec& gdx, const vec& dbar, const mat& fdx)
 {
-  // return -gdx - dbar - fdx.t() * rho;
-  return -gdx - fdx.t() * rho;
+  return -gdx - dbar - fdx.t() * rho;
+  // return -gdx - fdx.t() * rho;
 }
 
 /** @brief Receding horizon ergodic trajectory optimization */
@@ -68,15 +99,9 @@ public:
 
   void setTarget(const Target& target);
 
-private:
   void configTarget(const GridMap& grid);
 
-  /**
-   * @brief Compose time averaged trajectory fourier coefficients
-   * @param xt - trajectory
-   * @details xt contains the predicted trajectory + sampled states from memory
-   */
-  // void trajCoeff(const mat& xt);
+private:
 
   /**
    * @brief Compose the gradient of the ergodic metric
@@ -94,13 +119,12 @@ private:
   void updateControl(const mat& xt, const mat& rhot);
 
   /**
-   * @brief Log loss barrier function to obstacles of the form -log(b-x)
-   * @param grid - grid map
-   * @param xt - predicted trajectory
-   * @details Updates a matrix conatining the log loss barrier function derivatve
+   * @brief Gradient of the barrier function to obstacles of the form (x-b)*(x-b)
+   * @param xt - predicted trajectory in fourier domain
+   * @details Updates a matrix conatining the barrier function derivatve
    * for each state in xt
    */
-  void barrier(const GridMap& grid);
+  void barrier(const mat& xt);
 
 private:
   ModelT model_;         // robot's dynamic model
@@ -121,7 +145,7 @@ private:
   vec ck_;               // trajectory fourier coefficients
   vec rhoT_;             // co-state terminal condition
   vec map_pos_;          // position of map
-  vec umin_;             // lower limif on controls
+  vec umin_;             // lower limit on controls
   vec umax_;             // upper limit on controls
   Basis basis_;          // fourier basis
   ReplayBuffer buffer_;  // store past states in frame of occupancy map
@@ -143,7 +167,7 @@ ErgodicControl<ModelT>::ErgodicControl(const ModelT& model, const Collision& col
   , expl_weight_(exploration_weight)
   , steps_(static_cast<unsigned int>(std::abs(horizon / dt)))
   , Rinv_(inv(R))
-  , ut_(model.action_space, steps_, arma::fill::zeros)
+  , ut_(3, steps_, arma::fill::zeros) // body twist Vb = [vx, vy, w]
   , edx_(model.state_space, steps_, arma::fill::zeros)  // set heading column to zeros
   , bdx_(model.state_space, steps_, arma::fill::zeros)  // set heading column to zeros
   , traj_(model.state_space, steps_)
@@ -181,31 +205,29 @@ vec ErgodicControl<ModelT>::control(const GridMap& grid, const vec& x)
   // Forward simulation
   RungeKutta rk4(dt_);
   rk4.solve(traj_, model_, x, ut_, horizon_);
-  // RungeKutta45 model_rk45(0.001, 0.01, 1e-3, 1e6);
-  // model_rk45.solve(xt_, model_, x, ut_, dt_, horizon_);
-  // traj_.print("traj_:");
 
   // Sample past states
   mat xt_total;
   buffer_.sampleMemory(xt_total, traj_);
-  // std::cout << xt_total.n_cols << std::endl;
 
   // Transform from map frame to fourier frame
   xt_total.row(0) -= map_pos_(0);
   xt_total.row(1) -= map_pos_(1);
 
-  for (unsigned int i = 0; i < xt_total.n_cols; i++)
-  {
-    if (xt_total(0, i) < 0.0 || xt_total(1, i) < 0.0)
-    {
-      std::cout << "WARNING: Trajectory is not within fourier domain" << std::endl;
-      xt_total.rows(0, 1).print();
-    }
-  }
+  //////////////////////////////////////////////////////////////////////////////
+  // DEBUG
+  // for (unsigned int i = 0; i < xt_total.n_cols; i++)
+  // {
+  //   if (xt_total(0, i) < 0.0 || xt_total(1, i) < 0.0)
+  //   {
+  //     std::cout << "WARNING: Trajectory is not within fourier domain" << std::endl;
+  //     // xt_total.rows(0, 1).print();
+  //   }
+  // }
+  //////////////////////////////////////////////////////////////////////////////
 
   // Extract optimized trajectory in fourier domain
   mat xt = xt_total.cols(xt_total.n_cols - steps_, xt_total.n_cols - 1);
-  // std::cout << steps_ << " " << xt.n_cols << std::endl;
 
   // Update the trajectory fourier coefficients
   basis_.trajCoeff(ck_, xt_total);
@@ -213,52 +235,45 @@ vec ErgodicControl<ModelT>::control(const GridMap& grid, const vec& x)
   // Gradient of he ergodic measure w.r.t the state
   gradErgodicMetric(xt);
   edx_.rows(0, 1) *= expl_weight_;
-  // edx_.print("edx:");
 
-  // barrier(grid);
+  // Barrier function
+  barrier(xt);
   // bdx_.print("bdx_:");
 
   // Backwards pass
   mat rhot;
   rk4.solve(rhot, rhodot_, model_, rhoT_, xt, ut_, edx_, bdx_, horizon_);
-  // rhot.print("rho: rk4");
 
-  // RungeKutta45 costate_rk45(0.001, 0.01, 1e-2, 1e6);
-  // costate_rk45.solve(rhot, rhodot_, model_, rhoT_, xt_, ut_, edx_, bdx_, dt_,
-  // horizon_);
-  // rhot.print("rho: rk45");
-
-  const auto max_rho = max(max(rhot, 1));
-  const auto min_rho = min(min(rhot, 1));
-
+  //////////////////////////////////////////////////////////////////////////////
+  // DEBUG
+  // const auto max_rho = max(max(rhot, 1));
+  // const auto min_rho = min(min(rhot, 1));
+  //
   // std::cout << "max rho: " << max(max(rhot, 1)) << std::endl;
   // std::cout << "min rho: " << min(min(rhot, 1)) << std::endl;
 
-  if (max_rho > 100.0)
-  {
-    std::cout << "OVERFLOW max rho: " << max_rho << std::endl;
-  }
+  // if (max_rho > 100.0)
+  // {
+  //   std::cout << "OVERFLOW max rho: " << max_rho << std::endl;
+  // }
+  //
+  // if (min_rho < -100.0)
+  // {
+  //   std::cout << "OVERFLOW min rho: " << min_rho << std::endl;
+  // }
+  //
+  // // if (any(abs(rhot.row(0)) < 1.0e-12) || any(abs(rhot.row(1)) < 1.0e-12) ||
+  // // any(abs(rhot.row(2)) < 1.0e-12))
+  // // {
+  // //   std::cout << "UNDERFLOW: gradient is zero" << std::endl;
+  // // }
+  //////////////////////////////////////////////////////////////////////////////
 
-  if (min_rho < -100.0)
-  {
-    std::cout << "OVERFLOW min rho: " << min_rho << std::endl;
-  }
-
-  // std::cout << "max rho: " << max(max(rhot, 1)) << std::endl;
-  // std::cout << "min rho: " << min(min(rhot, 1)) << std::endl;
-
-  // max(rhot, 1).print("max rho");
-  // min(rhot, 1).print("min rho");
-
+  // Update control signal
   updateControl(xt, rhot);
-  // ut_.print("Control:");
 
   // Store current state in frame of map
   buffer_.append(x);
-
-  // xt.row(0) += map_pos_(0);
-  // xt.row(1) += map_pos_(1);
-  // xt.print("xt");
 
   return ut_.col(0);
 }
@@ -301,7 +316,6 @@ void ErgodicControl<ModelT>::configTarget(const GridMap& grid)
   const auto my = grid.ymax() - grid.ymin();
 
   // Map is the same size
-  // if (mx > basis.lx_ || my > basis.ly_)
   if (almost_equal(mx, basis_.lx_) && almost_equal(my, basis_.ly_))
   {
     return;
@@ -321,8 +335,8 @@ void ErgodicControl<ModelT>::configTarget(const GridMap& grid)
   phi_grid_.resize(2, nx * ny);
   phi_vals_.resize(nx * ny);
 
-  // Construction the grid
-  auto col = 0;
+  // Construct the grid
+  unsigned int col = 0;
   auto y = 0.0;
   for (unsigned int i = 0; i < ny; i++)
   {
@@ -331,8 +345,20 @@ void ErgodicControl<ModelT>::configTarget(const GridMap& grid)
     {
       phi_grid_(0, col) = x;
       phi_grid_(1, col) = y;
-
       // std::cout << x << " " << y << std::endl;
+
+      // const auto p = grid.getCell(x + grid.xmin(), y + grid.ymin());
+      // const std::vector<unsigned int> gidx =
+      //     grid.world2Grid(x + grid.xmin(), y + grid.ymin());
+      // if (grid.gridBounds(gidx.at(0), gidx.at(1)))
+      // {
+      //   // std::cout << "HERE !!!!!!!!!!!!" << std::endl;
+      //
+      //   const auto idx = grid.grid2RowMajor(gidx.at(0), gidx.at(1));
+      //   const auto p = grid.getCell(idx);
+      //   phi_vals_(col) = entropy(p);
+      // }
+
       col++;
       x += resolution_;
     }
@@ -345,6 +371,8 @@ void ErgodicControl<ModelT>::configTarget(const GridMap& grid)
   // phi_vals_.print("phi_vals");
 
   // spatial fourier coefficients
+  // phi_vals_ /= sum(phi_vals_);
+
   basis_.spatialCoeff(phik_, phi_vals_, phi_grid_);
   // phik_.print("phik_");
 
@@ -354,13 +382,8 @@ void ErgodicControl<ModelT>::configTarget(const GridMap& grid)
 template <class ModelT>
 void ErgodicControl<ModelT>::gradErgodicMetric(const mat& xt)
 {
-  // ck_.print("ck_");
-  // phik_.print("phik_");
-
   const vec fourier_diff = basis_.lamdak_ % (ck_ - phik_);
-  // fourier_diff.print("fourier_diff");
 
-  // TODO: add weight to influence ergodicity
   mat dfk;
   for (unsigned int i = 0; i < steps_; i++)
   {
@@ -374,70 +397,39 @@ void ErgodicControl<ModelT>::gradErgodicMetric(const mat& xt)
 template <class ModelT>
 void ErgodicControl<ModelT>::updateControl(const mat& xt, const mat& rhot)
 {
+  // TODO: apply filter to control signal (savgol filter)
   for (unsigned int i = 0; i < xt.n_cols; i++)
   {
     // rhot is already sorted from t0 to tf
     ut_.col(i) = -Rinv_ * model_.fdu(xt.col(i)).t() * rhot.col(i);
-
-    // TODO: apply filter to control signal (savgol filter)
     // ut_.col(i).print("u:");
 
-    for (unsigned int j = 0; j < ut_.n_rows; j++)
-    {
-      ut_(j, i) = std::clamp(ut_(j, i), umin_(j), umax_(j));
-    }
-
-    // ut_(0, i) = std::clamp(ut_(0, i), -0.1, 0.1);
-    // ut_(1, i) = std::clamp(ut_(1, i), -0.1, 0.1);
-    // ut_(2, i) = std::clamp(ut_(2, i), -0.5, 0.5);
-
-    // ut_(0, i) = std::clamp(ut_(0, i), -1.0, 1.0);
-    // ut_(1, i) = std::clamp(ut_(1, i), -1.0, 1.0);
-    // ut_(2, i) = std::clamp(ut_(2, i), -2.0, 2.0);
-
-    // if (any(ut_.col(i) > 1.0) || any(ut_.col(i) < -1.0))
-    // {
-    //   // euclidean norm
-    //   ut_.col(i) /= norm(ut_.col(i), 2);
-    // }
+    ut_(0, i) = std::clamp(ut_(0, i), umin_(0), umax_(0));
+    ut_(1, i) = std::clamp(ut_(1, i), umin_(1), umax_(1));
+    ut_(2, i) = std::clamp(ut_(2, i), umin_(2), umax_(2));
   }
 }
 
 template <class ModelT>
-void ErgodicControl<ModelT>::barrier(const GridMap& grid)
+void ErgodicControl<ModelT>::barrier(const mat& xt)
 {
-  const auto weight = 1e12;
-  const auto eps = collision_.totalPadding();
+  // TODO: load from param sever
+  const auto weight = 25.0;
+  const auto eps = 0.05;
 
   for (unsigned int i = 0; i < steps_; i++)
   {
-    vec dbar;
-    if (collision_.minDirection(dbar, grid, traj_.col(i)) == CollisionMsg::obstacle)
-    {
-      // x
-      if (std::abs(dbar(0)) < eps)
-      {
-        dbar(0) *= weight;
-      }
-      else
-      {
-        dbar(0) *= 1.0 / dbar(0);
-        // std::cout << "dbar x: " << dbar(0) << std::endl;
-      }
+    vec dbar(2, arma::fill::zeros);
 
-      // y
-      if (std::abs(dbar(1)) < eps)
-      {
-        dbar(1) *= weight;
-      }
-      else
-      {
-        dbar(1) = 1.0 / dbar(1);
-        // std::cout << "dbar y: " << dbar(1) << std::endl;
-      }
-    }
+    dbar(0) += 2.0 * (xt(0, i) >  basis_.lx_ - eps) * (xt(0, i) -  (basis_.lx_ - eps));
+    dbar(1) += 2.0 * (xt(1, i) >  basis_.ly_ - eps) * (xt(1, i) -  (basis_.ly_ - eps));
 
-    bdx_(span(0, 1), span(i, i)) = dbar;
+    dbar(0) += 2.0 * (xt(0, i) < eps) * (xt(0, i) - eps);
+    dbar(1) += 2.0 * (xt(1, i) < eps) * (xt(1, i) - eps);
+
+    // dbar.print("dbar");
+
+    bdx_(span(0, 1), span(i, i)) = weight * dbar;
   }
 }
 
