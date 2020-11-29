@@ -6,7 +6,7 @@
  */
 
 #include <gtest/gtest.h>
-#include <ergodic_exploration/omni.hpp>
+#include <ergodic_exploration/models/omni.hpp>
 
 TEST(OmniTest, MecanumKinematics)
 {

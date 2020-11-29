@@ -6,8 +6,7 @@
  */
 
 #include <gtest/gtest.h>
-#include <ergodic_exploration/cart.hpp>
-#include <ergodic_exploration/types.hpp>
+#include <ergodic_exploration/models/cart.hpp>
 
 TEST(CartTest, CartKinematics)
 {
