@@ -51,6 +51,7 @@ void Target::fill(vec& phi_vals, const vec& trans, const mat& phi_grid) const
     phi_vals(i) = evaluate(phi_grid.col(i), trans);
   }
 
+  // normalize distribution values [0 1]
   phi_vals /= sum(phi_vals);
 }
 

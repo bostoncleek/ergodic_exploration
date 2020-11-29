@@ -12,7 +12,6 @@
 
 namespace ergodic_exploration
 {
-
 Collision::Collision(double boundary_radius, double search_radius,
                      double obstacle_threshold, double occupied_threshold)
   : boundary_radius_(boundary_radius)
@@ -192,8 +191,8 @@ bool Collision::checkCell(CollisionConfig& cfg, const GridMap& grid, unsigned in
   if (grid.gridBounds(ci, cj) && !(grid.getCell(ci, cj) < occupied_threshold_))
   {
     // squared distance circle center to obstacle
-    const auto sqrd_obs = (cfg.cx - cj)*(cfg.cx - cj) + (cfg.cy - ci)*(cfg.cy - ci) ;
-    
+    const auto sqrd_obs = (cfg.cx - cj) * (cfg.cx - cj) + (cfg.cy - ci) * (cfg.cy - ci);
+
     // update smallest squared distance to obstacle
     if (sqrd_obs < cfg.sqrd_obs || cfg.sqrd_obs == -1)
     {
