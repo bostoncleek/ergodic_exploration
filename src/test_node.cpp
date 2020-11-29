@@ -32,7 +32,6 @@ using arma::vec;
 
 using namespace ergodic_exploration;
 
-
 int main(int argc, char** argv)
 {
   ROS_INFO_STREAM_NAMED("main", "Starting exploration");
@@ -132,8 +131,6 @@ int main(int argc, char** argv)
   //                                       acc_lim_y, acc_lim_th, max_vel_x, min_vel_x,
   //                                       max_vel_y, min_vel_y, max_rot_vel, min_rot_vel,
   //                                       vx_samples, vy_samples, vth_samples);
-
-
 
   Gaussian g1({ 0.7, 0.7 }, { 0.1, 0.1 });
   Gaussian g2({ 0.3, 0.3 }, { 0.1, 0.1 });
