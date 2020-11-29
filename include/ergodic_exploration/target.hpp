@@ -41,10 +41,11 @@ struct Gaussian
 
   double operator()(const vec& pt, const vec& trans) const
   {
-    if (any(mu - trans) < 0.0)
-    {
-      std::cout << "WARNING: Targert mean not within fourier domain" << std::endl;
-    }
+    // DEBUG
+    // if (any(mu - trans) < 0.0)
+    // {
+    //   std::cout << "WARNING: Targert mean not within fourier domain" << std::endl;
+    // }
 
     // translate mu into frame of fourier domain
     const vec diff = pt - (mu - trans);
