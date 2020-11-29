@@ -1,8 +1,0 @@
-image: cubicles.png
-# For other figure use resolution: 1
-resolution: 0.01
-origin:  [0, 0, 0]
-negate: 0
-occupied_thresh: 1
-free_thresh: 0
-mode: scale
