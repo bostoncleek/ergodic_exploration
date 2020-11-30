@@ -14,6 +14,7 @@
 
 #include <ros/ros.h>
 #include <ros/console.h>
+#include <std_srvs/Empty.h>
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <nav_msgs/OccupancyGrid.h>
@@ -29,7 +30,6 @@
 #include <ergodic_exploration/models/omni.hpp>
 #include <ergodic_exploration/ergodic_control.hpp>
 #include <ergodic_exploration/dynamic_window.hpp>
-#include <ergodic_exploration/mapping.hpp>
 
 using arma::eye;
 using arma::mat;
@@ -39,67 +39,66 @@ using namespace ergodic_exploration;
 
 constexpr char LOGNAME[] = "ergodic exploration";
 
-static GridMap grid;
+static GridMap grid, mi_grid;
 static vec pose = { 0.0, 0.0, 0.0 };
 static vec vb = { 0.0, 0.0, 0.0 };
+static double distance_traveled = 0.0;
 
-static sensor_msgs::LaserScan::ConstPtr scan;
-
-static bool scan_update = false;
-static bool odom_update = false;
 static bool map_received = false;
-
-void scanCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
-{
-  scan = msg;
-  // ROS_INFO("Laser max: %f Laser min: %f", msg->range_max, msg->range_min);
-  scan_update = true;
-}
+static bool mi_received = false;
 
 void odomCallback(const nav_msgs::Odometry& msg)
 {
   vb(0) = msg.twist.twist.linear.x;
   vb(1) = msg.twist.twist.linear.y;
   vb(2) = msg.twist.twist.angular.z;
-
-  odom_update = true;
 }
 
-void modelCallBack(const gazebo_msgs::ModelStates& msg)
-{
-  // store names of all items in gazebo
-  std::vector<std::string> names = msg.name;
-
-  // index of robot
-  int robot_index = 0;
-
-  // find diff_drive robot
-  int ctr = 0;
-  for (const auto& item : names)
-  {
-    // check for robot
-    if (item == "nuridgeback")
-    {
-      robot_index = ctr;
-    }
-
-    ctr++;
-  }
-
-  // pose(0) = msg.pose[robot_index].position.x;
-  // pose(1) = msg.pose[robot_index].position.y;
-  // pose(2) = tf2::getYaw(msg.pose[robot_index].orientation);
-
-  // std::cout << "Pose gazebo: " << msg.pose[robot_index].position.x <<
-  // " " << msg.pose[robot_index].position.y << " " <<
-  // tf2::getYaw(msg.pose[robot_index].orientation) << std::endl;
-}
+// void modelCallBack(const gazebo_msgs::ModelStates& msg)
+// {
+//   // store names of all items in gazebo
+//   std::vector<std::string> names = msg.name;
+//
+//   // index of robot
+//   int robot_index = 0;
+//
+//   // find diff_drive robot
+//   int ctr = 0;
+//   for (const auto& item : names)
+//   {
+//     // check for robot
+//     if (item == "nuridgeback")
+//     {
+//       robot_index = ctr;
+//     }
+//
+//     ctr++;
+//   }
+//
+//   // distance_traveled += distance(pose(0), pose(1), msg.pose[robot_index].position.x,
+//   //                               msg.pose[robot_index].position.y);
+//   //
+//   // pose(0) = msg.pose[robot_index].position.x;
+//   // pose(1) = msg.pose[robot_index].position.y;
+//   // pose(2) = tf2::getYaw(msg.pose[robot_index].orientation);
+//
+//   // std::cout << "Pose gazebo: " << msg.pose[robot_index].position.x <<
+//   // " " << msg.pose[robot_index].position.y << " " <<
+//   // tf2::getYaw(msg.pose[robot_index].orientation) << std::endl;
+// }
 
 void mapCallback(const nav_msgs::OccupancyGrid::ConstPtr& msg)
 {
   grid.update(msg);
   // grid.print();
   map_received = true;
+}
+
+void miCallback(const nav_msgs::OccupancyGrid::ConstPtr& msg)
+{
+  mi_grid.update(msg);
+  // mi_grid.print();
+  mi_received = true;
 }
 
 int main(int argc, char** argv)
@@ -110,9 +109,9 @@ int main(int argc, char** argv)
   ros::NodeHandle pnh("~");
 
   ros::Subscriber map_sub = nh.subscribe("map", 1, mapCallback);
-  ros::Subscriber scan_sub = nh.subscribe("scan", 1, scanCallback);
+  ros::Subscriber mi_map_sub = nh.subscribe("mi_map", 1, miCallback);
   ros::Subscriber odom_sub = nh.subscribe("odom", 1, odomCallback);
-  ros::Subscriber model_sub = nh.subscribe("/gazebo/model_states", 1, modelCallBack);
+  // ros::Subscriber model_sub = nh.subscribe("/gazebo/model_states", 1, modelCallBack);
 
   // ros::Publisher map_pub = nh.advertise<nav_msgs::OccupancyGrid>("map_update", 1, true);
   ros::Publisher cmd_pub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 1);
@@ -222,33 +221,7 @@ int main(int argc, char** argv)
 
   Target target(gaussians);
 
-  // std::cout << buffer_size << std::endl;
-  // std::cout << num_basis << std::endl;
-  // //////////////////////////////////////////////////////////////////////////////
-  // // grid
-  // const auto xmin = -25.0;
-  // const auto xmax = 25.0;
-  // const auto ymin = -25.0;
-  // const auto ymax = 25.0;
-  // const auto resolution = 0.05;
-  // const auto xsize = ergodic_exploration::axis_length(xmin, xmax, resolution);
-  // const auto ysize = ergodic_exploration::axis_length(ymin, ymax, resolution);
-  // std::vector<int8_t> map_data(xsize * ysize, 50);
-  //
-  // GridMap my_grid(xmin, xmax, ymin, ymax, resolution, map_data);
-  // // //////////////////////////////////////////////////////////////////////////////
-  // nav_msgs::OccupancyGrid grid_msg;
-  // grid_msg.header.frame_id = "map";
-  // grid_msg.info.resolution = resolution;
-  // grid_msg.info.width = xsize;
-  // grid_msg.info.height = ysize;
-  // grid_msg.info.origin.position.x = xmin;
-  // grid_msg.info.origin.position.y = ymin;
-  //
-  // // TODO: use TF listener to get transform or param server
-  // const mat Tbs = ergodic_exploration::transform2d(0.393, 0.0);
-  // OccupancyMapper mapper(Tbs);
-  // //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
   Collision collision(boundary_radius, search_radius, obstacle_threshold,
                       occupied_threshold);
 
@@ -267,14 +240,16 @@ int main(int argc, char** argv)
   target.markers(marker_array, map_frame_id);
   target_pub.publish(marker_array);
 
-  // // vec u = ergodic_control.control(collision, grid, target, pose);
-  vec u = { 0.0, 0.0, 0.0 };
   // vec uref = { 0.7, 0.0, 0.0 };
 
+  vec u = { 0.0, 0.0, 0.0 };
+
   bool pose_known = false;
-  // bool first_map = false;
+  bool target_set = false;
+  bool update_target = false;
+  bool update_mi = true;
+
   ros::Rate rate(frequency);
-  unsigned int i = 0;
   while (nh.ok())
   {
     ros::spinOnce();
@@ -283,6 +258,10 @@ int main(int argc, char** argv)
     try
     {
       t_map_base = tfBuffer.lookupTransform(map_frame_id, base_frame_id, ros::Time(0));
+
+      distance_traveled += distance(pose(0), pose(1), t_map_base.transform.translation.x,
+                                    t_map_base.transform.translation.y);
+
       pose(0) = t_map_base.transform.translation.x;
       pose(1) = t_map_base.transform.translation.y;
       pose(2) = tf2::getYaw(t_map_base.transform.rotation);  // wrapped -PI to PI ?
@@ -291,36 +270,57 @@ int main(int argc, char** argv)
 
     catch (tf2::TransformException& ex)
     {
-      // ROS_WARN_NAMED(LOGNAME, "%s", ex.what());
-      continue;
+      ROS_WARN_NAMED(LOGNAME, "%s", ex.what());
+      // continue;
+    }
+
+    if (distance_traveled > 5.0)
+    {
+      ROS_INFO_NAMED(LOGNAME, "Robot traveled: %f", distance_traveled);
+      update_mi = true;
+    }
+
+    // TODO: publish 0 twist when updating mi
+    if (map_received && update_mi)
+    {
+      ROS_INFO_STREAM_NAMED(LOGNAME, "Checking if mi service exists");
+      if (ros::service::exists("/start_mi", true))
+      {
+        ROS_INFO_STREAM_NAMED(LOGNAME, "Calling mi service");
+
+        std_srvs::Empty srv;
+        ros::service::call("/start_mi", srv);
+
+        update_target = true;
+        update_mi = false;
+        distance_traveled = 0.0;
+      }
     }
 
     // pose_known = true;
 
     // Contol loop
-    if (map_received && pose_known)
+    if (map_received && mi_received && pose_known)
     {
       // auto t_start = std::chrono::high_resolution_clock::now();
 
-      // if (!first_map)
-      // {
-      //   ergodic_control.configTarget(grid);
-      //   first_map = true;
-      // }
-      //
-      // if (i == 5)
-      // {
-      //   ergodic_control.configTarget(grid);
-      //   i = 0;
-      // }
-
-      u = ergodic_control.control(grid, pose);
-      if (!validate_control(collision, grid, pose, u, val_dt, val_horizon))
+      if (!target_set || update_target)
       {
-        ROS_INFO_STREAM_NAMED(LOGNAME, "Collision detected! Enabling DWA!");
+        ergodic_control.configTarget(mi_grid);
+        target_set = true;
+        update_target = false;
+      }
 
-        // If dwa fails twist is set to zeros
-        u = dwa.control(grid, pose, vb, u);
+      if (target_set)
+      {
+        u = ergodic_control.control(grid, pose);
+        if (!validate_control(collision, grid, pose, u, val_dt, val_horizon))
+        {
+          ROS_INFO_STREAM_NAMED(LOGNAME, "Collision detected! Enabling DWA!");
+
+          // If dwa fails twist is set to zeros
+          u = dwa.control(grid, pose, vb, u);
+        }
       }
 
       // ROS_INFO_STREAM_NAMED(LOGNAME, "DWA!");
@@ -339,7 +339,7 @@ int main(int argc, char** argv)
       geometry_msgs::Twist twist_msg;
       twist_msg.linear.x = u(0);
       twist_msg.linear.y = u(1);
-      twist_msg.angular.z = u(2);
+      twist_msg.angular.z = u(2) = 0.0;
 
       cmd_pub.publish(twist_msg);
 
@@ -347,26 +347,7 @@ int main(int argc, char** argv)
       ergodic_control.path(trajectory, map_frame_id);
 
       path_pub.publish(trajectory);
-
-      i++;
-
-      // break;
     }
-
-    // if (scan_update)
-    // {
-    //   if (mapper.updateMap(my_grid, scan, pose))
-    //   {
-    //     grid_msg.data = my_grid.gridData();
-    //     map_pub.publish(grid_msg);
-    //   }
-    //   else
-    //   {
-    //     ROS_ERROR_NAMED(LOGNAME, "Failed to update map");
-    //   }
-    //
-    //   scan_update = false;
-    // }
 
     rate.sleep();
   }

@@ -1,9 +1,21 @@
 <launch>
+  <arg name="load_map" default="false"/>
+  <arg name="map" default="$(find ergodic_exploration)/maps/maze.yaml"/>
+
+  <node if="$(arg load_map)" pkg="map_server" name="map_server" type="map_server"
+          args="$(arg map)"/>
+
   <node pkg="ergodic_exploration" type="exploration" name="exploration" output="screen">
     <rosparam command="load" file="$(find ergodic_exploration)/config/explore.yaml" />
-    <remap from="scan"                     to="front/scan"/>
-    <!-- <remap from="map"                      to="/ridgeback/rtabmap/octomap_grid"/> -->
+    <!-- <remap from="map"                      to="/ridgeback/rtabmap/grid_map"/> -->
   </node>
+
+  <node pkg="range_mi" name="occupancy_grid_mi" type="occupancy_grid_mi" output="screen">
+    <rosparam command="load" file="$(find ergodic_exploration)/config/information.yaml"/>
+  </node>
+
+  <node if="$(arg load_map)" pkg="tf2_ros" type="static_transform_publisher"
+    name="map_to_odom" args="0 0 0 0 0 0 1 map odom"/>
 
   <node name="$(anon rviz)" pkg="rviz" type="rviz" required="true"
     args="-d $(find ergodic_exploration)/config/explore.rviz"/>

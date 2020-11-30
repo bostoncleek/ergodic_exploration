@@ -213,7 +213,7 @@ template <class ModelT>
 vec ErgodicControl<ModelT>::control(const GridMap& grid, const vec& x)
 {
   // Update target grid if needed
-  configTarget(grid);
+  // configTarget(grid);
 
   // Shift columns to the left by 1 and set last column to zeros
   ut_.cols(0, ut_.n_cols - 2) = ut_.cols(1, ut_.n_cols - 1);
@@ -328,21 +328,11 @@ void ErgodicControl<ModelT>::configTarget(const GridMap& grid)
   map_pos_(0) = grid.xmin();
   map_pos_(1) = grid.ymin();
 
-  // size of map
-  const auto mx = grid.xmax() - grid.xmin();
-  const auto my = grid.ymax() - grid.ymin();
-
-  // Map is the same size
-  if (almost_equal(mx, basis_.lx_) && almost_equal(my, basis_.ly_))
-  {
-    return;
-  }
-
   std::cout << "Updating target distribution grid... ";
 
-  // update phi_grid if map has grown
-  basis_.lx_ = mx;
-  basis_.ly_ = my;
+  // size of map
+  basis_.lx_ = grid.xmax() - grid.xmin();
+  basis_.ly_ = grid.ymax() - grid.ymin();
 
   // Add 1 to include the boundary
   // Use resolution that is specified for the target grid
@@ -351,6 +341,8 @@ void ErgodicControl<ModelT>::configTarget(const GridMap& grid)
 
   phi_grid_.resize(2, nx * ny);
   phi_vals_.resize(nx * ny);
+
+  const GridData mi_data = grid.gridData();
 
   // Construct the grid
   unsigned int col = 0;
@@ -364,17 +356,18 @@ void ErgodicControl<ModelT>::configTarget(const GridMap& grid)
       phi_grid_(1, col) = y;
       // std::cout << x << " " << y << std::endl;
 
-      // const auto p = grid.getCell(x + grid.xmin(), y + grid.ymin());
-      // const std::vector<unsigned int> gidx =
-      //     grid.world2Grid(x + grid.xmin(), y + grid.ymin());
-      // if (grid.gridBounds(gidx.at(0), gidx.at(1)))
-      // {
-      //   // std::cout << "HERE !!!!!!!!!!!!" << std::endl;
-      //
-      //   const auto idx = grid.grid2RowMajor(gidx.at(0), gidx.at(1));
-      //   const auto p = grid.getCell(idx);
-      //   phi_vals_(col) = entropy(p);
-      // }
+      const std::vector<unsigned int> gidx =
+          grid.world2Grid(x + grid.xmin(), y + grid.ymin());
+
+      if (grid.gridBounds(gidx.at(0), gidx.at(1)))
+      {
+        // std::cout << "HERE !!!!!!!!!!!!" << std::endl;
+
+        const auto idx = grid.grid2RowMajor(gidx.at(0), gidx.at(1));
+
+        phi_vals_(col) = static_cast<double>(mi_data.at(idx));
+        // std::cout << phi_vals_(col) << std::endl;
+      }
 
       col++;
       x += resolution_;
@@ -383,12 +376,9 @@ void ErgodicControl<ModelT>::configTarget(const GridMap& grid)
   }
   // phi_grid_.t().print("phi_grid");
 
-  // Evaluate each grid cell
-  target_.fill(phi_vals_, map_pos_, phi_grid_);
-  // phi_vals_.print("phi_vals");
-
   // spatial fourier coefficients
-  // phi_vals_ /= sum(phi_vals_);
+  phi_vals_ /= sum(phi_vals_);
+  // std::cout << "sum phi vals: " << sum(phi_vals_) << std::endl;
 
   basis_.spatialCoeff(phik_, phi_vals_, phi_grid_);
   // phik_.print("phik_");
