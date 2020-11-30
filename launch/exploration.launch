@@ -1,7 +1,6 @@
 <launch>
   <node pkg="ergodic_exploration" type="exploration" name="exploration" output="screen">
     <rosparam command="load" file="$(find ergodic_exploration)/config/explore.yaml" />
-    <remap from="scan"                     to="front/scan"/>
     <!-- <remap from="map"                      to="/ridgeback/rtabmap/octomap_grid"/> -->
   </node>
 

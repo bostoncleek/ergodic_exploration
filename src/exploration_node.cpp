@@ -43,57 +43,45 @@ static GridMap grid;
 static vec pose = { 0.0, 0.0, 0.0 };
 static vec vb = { 0.0, 0.0, 0.0 };
 
-static sensor_msgs::LaserScan::ConstPtr scan;
-
-static bool scan_update = false;
 static bool odom_update = false;
 static bool map_received = false;
-
-void scanCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
-{
-  scan = msg;
-  // ROS_INFO("Laser max: %f Laser min: %f", msg->range_max, msg->range_min);
-  scan_update = true;
-}
 
 void odomCallback(const nav_msgs::Odometry& msg)
 {
   vb(0) = msg.twist.twist.linear.x;
   vb(1) = msg.twist.twist.linear.y;
   vb(2) = msg.twist.twist.angular.z;
-
-  odom_update = true;
 }
 
-void modelCallBack(const gazebo_msgs::ModelStates& msg)
-{
-  // store names of all items in gazebo
-  std::vector<std::string> names = msg.name;
-
-  // index of robot
-  int robot_index = 0;
-
-  // find diff_drive robot
-  int ctr = 0;
-  for (const auto& item : names)
-  {
-    // check for robot
-    if (item == "nuridgeback")
-    {
-      robot_index = ctr;
-    }
-
-    ctr++;
-  }
-
-  // pose(0) = msg.pose[robot_index].position.x;
-  // pose(1) = msg.pose[robot_index].position.y;
-  // pose(2) = tf2::getYaw(msg.pose[robot_index].orientation);
-
-  // std::cout << "Pose gazebo: " << msg.pose[robot_index].position.x <<
-  // " " << msg.pose[robot_index].position.y << " " <<
-  // tf2::getYaw(msg.pose[robot_index].orientation) << std::endl;
-}
+// void modelCallBack(const gazebo_msgs::ModelStates& msg)
+// {
+//   // store names of all items in gazebo
+//   std::vector<std::string> names = msg.name;
+//
+//   // index of robot
+//   int robot_index = 0;
+//
+//   // find diff_drive robot
+//   int ctr = 0;
+//   for (const auto& item : names)
+//   {
+//     // check for robot
+//     if (item == "nuridgeback")
+//     {
+//       robot_index = ctr;
+//     }
+//
+//     ctr++;
+//   }
+//
+//   // pose(0) = msg.pose[robot_index].position.x;
+//   // pose(1) = msg.pose[robot_index].position.y;
+//   // pose(2) = tf2::getYaw(msg.pose[robot_index].orientation);
+//
+//   // std::cout << "Pose gazebo: " << msg.pose[robot_index].position.x <<
+//   // " " << msg.pose[robot_index].position.y << " " <<
+//   // tf2::getYaw(msg.pose[robot_index].orientation) << std::endl;
+// }
 
 void mapCallback(const nav_msgs::OccupancyGrid::ConstPtr& msg)
 {
@@ -110,9 +98,8 @@ int main(int argc, char** argv)
   ros::NodeHandle pnh("~");
 
   ros::Subscriber map_sub = nh.subscribe("map", 1, mapCallback);
-  ros::Subscriber scan_sub = nh.subscribe("scan", 1, scanCallback);
   ros::Subscriber odom_sub = nh.subscribe("odom", 1, odomCallback);
-  ros::Subscriber model_sub = nh.subscribe("/gazebo/model_states", 1, modelCallBack);
+  // ros::Subscriber model_sub = nh.subscribe("/gazebo/model_states", 1, modelCallBack);
 
   // ros::Publisher map_pub = nh.advertise<nav_msgs::OccupancyGrid>("map_update", 1, true);
   ros::Publisher cmd_pub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 1);
@@ -291,8 +278,8 @@ int main(int argc, char** argv)
 
     catch (tf2::TransformException& ex)
     {
-      // ROS_WARN_NAMED(LOGNAME, "%s", ex.what());
-      continue;
+      ROS_WARN_NAMED(LOGNAME, "%s", ex.what());
+      // continue;
     }
 
     // pose_known = true;
