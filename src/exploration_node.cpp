@@ -119,6 +119,9 @@ int main(int argc, char** argv)
   ros::Publisher target_pub =
       nh.advertise<visualization_msgs::MarkerArray>("target", 1, true);
 
+  ros::ServiceClient mi_client = nh.serviceClient<std_srvs::Empty>("start_mi");
+
+
   tf2_ros::Buffer tfBuffer;
   tf2_ros::TransformListener tfListener(tfBuffer);
   geometry_msgs::TransformStamped t_map_base;
@@ -284,12 +287,12 @@ int main(int argc, char** argv)
     if (map_received && update_mi)
     {
       ROS_INFO_STREAM_NAMED(LOGNAME, "Checking if mi service exists");
-      if (ros::service::exists("/start_mi", true))
+      if (mi_client.exists())
       {
         ROS_INFO_STREAM_NAMED(LOGNAME, "Calling mi service");
 
         std_srvs::Empty srv;
-        ros::service::call("/start_mi", srv);
+        mi_client.call(srv);
 
         update_target = true;
         update_mi = false;

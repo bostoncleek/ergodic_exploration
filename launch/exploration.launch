@@ -12,6 +12,7 @@
 
   <node pkg="range_mi" name="occupancy_grid_mi" type="occupancy_grid_mi" output="screen">
     <rosparam command="load" file="$(find ergodic_exploration)/config/information.yaml"/>
+    <!-- <remap from="map"                      to="/ridgeback/rtabmap/grid_map"/> -->
   </node>
 
   <node if="$(arg load_map)" pkg="tf2_ros" type="static_transform_publisher"

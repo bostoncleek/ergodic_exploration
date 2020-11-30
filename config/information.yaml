@@ -20,11 +20,11 @@ noise_integration_step: 0.25 # Meters
 ##############
 # I/O Topics #
 ##############
-# The map input (occupancy grid)
-map_topic: "/map"
-# map_topic: "/ridgeback/rtabmap/grid_map"
-# The mutual surface output (MIGrid, see .msg file)
-mi_topic: "/mi"
+# # The map input (occupancy grid)
+# map_topic: "/map"
+# # map_topic: "/ridgeback/rtabmap/grid_map"
+# # The mutual surface output (MIGrid, see .msg file)
+# mi_topic: "/mi"
 
 #################
 # Visualization #
@@ -36,10 +36,10 @@ visualize: true
 # RVIZ as they are being computed
 visualize_more: true
 # Visualize mutual information surfaces
-mi_map_topic: "/mi_map"
-# Visualize the map of conditional probabilities.
-conditional_map_topic: "/conditional_map"
-# Click on the map to condition a point
-click_condition_topic: "/clicked_point"
-# Visualize a randomized map for monte carlo compuation.
-binary_map_topic: "/binary_map"
+# mi_map_topic: "/mi_map"
+# # Visualize the map of conditional probabilities.
+# conditional_map_topic: "/conditional_map"
+# # Click on the map to condition a point
+# click_condition_topic: "/clicked_point"
+# # Visualize a randomized map for monte carlo compuation.
+# binary_map_topic: "/binary_map"
