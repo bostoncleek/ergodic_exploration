@@ -43,7 +43,6 @@ static GridMap grid;
 static vec pose = { 0.0, 0.0, 0.0 };
 static vec vb = { 0.0, 0.0, 0.0 };
 
-static bool odom_update = false;
 static bool map_received = false;
 
 void odomCallback(const nav_msgs::Odometry& msg)
