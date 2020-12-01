@@ -244,8 +244,6 @@ int main(int argc, char** argv)
   target.markers(marker_array, map_frame_id);
   target_pub.publish(marker_array);
 
-  // vec uref = { 0.7, 0.0, 0.0 };
-
   vec u = { 0.0, 0.0, 0.0 };
 
   bool pose_known = false;
@@ -257,6 +255,8 @@ int main(int argc, char** argv)
   while (nh.ok())
   {
     ros::spinOnce();
+
+    // pose_known = true;
 
     // Update pose
     try
@@ -278,6 +278,7 @@ int main(int argc, char** argv)
       // continue;
     }
 
+    // TODO: Check if map has grown and if so update mi
     if (distance_traveled > 5.0)
     {
       ROS_INFO_NAMED(LOGNAME, "Robot traveled: %f", distance_traveled);
@@ -301,13 +302,9 @@ int main(int argc, char** argv)
       }
     }
 
-    pose_known = true;
-
     // Contol loop
     if (map_received && mi_received && pose_known)
     {
-      // auto t_start = std::chrono::high_resolution_clock::now();
-
       if (!target_set || update_target)
       {
         ergodic_control.configTarget(mi_grid);
@@ -332,19 +329,6 @@ int main(int argc, char** argv)
 
         }
       }
-
-      // ROS_INFO_STREAM_NAMED(LOGNAME, "DWA!");
-
-      // vec u = dwa.control(grid, pose, vb, uref);
-
-      // u.print("u_t:");
-
-      // auto t_end = std::chrono::high_resolution_clock::now();
-      // std::cout
-      //     << "Hz: "
-      //     << 1.0 / (std::chrono::duration<double, std::milli>(t_end - t_start).count() /
-      //               1000.0)
-      //     << std::endl;
 
       geometry_msgs::Twist twist_msg;
       twist_msg.linear.x = u(0);
