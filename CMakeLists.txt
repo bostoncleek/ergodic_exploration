@@ -107,7 +107,6 @@ add_library(${PROJECT_NAME}
 
 # Declare a C++ executable
 add_executable(exploration src/exploration_node.cpp)
-add_executable(test_node src/test_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -130,12 +129,6 @@ target_link_libraries(exploration
 	${ARMADILLO_LIBRARIES}
 )
 
-target_link_libraries(test_node
-  ${catkin_LIBRARIES}
-	${PROJECT_NAME}
-	${ARMADILLO_LIBRARIES}
-)
-
 #############
 ## Install ##
 #############
@@ -148,7 +141,7 @@ target_link_libraries(test_node
 # )
 
 # Mark executables for installation
-install(TARGETS exploration test_node
+install(TARGETS exploration
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
