@@ -75,12 +75,12 @@ void odomCallback(const nav_msgs::Odometry& msg)
 //     ctr++;
 //   }
 //
-//   // distance_traveled += distance(pose(0), pose(1), msg.pose[robot_index].position.x,
-//   //                               msg.pose[robot_index].position.y);
-//   //
-//   // pose(0) = msg.pose[robot_index].position.x;
-//   // pose(1) = msg.pose[robot_index].position.y;
-//   // pose(2) = tf2::getYaw(msg.pose[robot_index].orientation);
+//   distance_traveled += distance(pose(0), pose(1), msg.pose[robot_index].position.x,
+//                                 msg.pose[robot_index].position.y);
+//
+//   pose(0) = msg.pose[robot_index].position.x;
+//   pose(1) = msg.pose[robot_index].position.y;
+//   pose(2) = normalize_angle_PI(tf2::getYaw(msg.pose[robot_index].orientation));
 //
 //   // std::cout << "Pose gazebo: " << msg.pose[robot_index].position.x <<
 //   // " " << msg.pose[robot_index].position.y << " " <<
@@ -113,7 +113,6 @@ int main(int argc, char** argv)
   ros::Subscriber odom_sub = nh.subscribe("odom", 1, odomCallback);
   // ros::Subscriber model_sub = nh.subscribe("/gazebo/model_states", 1, modelCallBack);
 
-  // ros::Publisher map_pub = nh.advertise<nav_msgs::OccupancyGrid>("map_update", 1, true);
   ros::Publisher cmd_pub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 1);
   ros::Publisher path_pub = nh.advertise<nav_msgs::Path>("trajectory", 1);
   ros::Publisher dwa_path_pub = nh.advertise<nav_msgs::Path>("dwa_trajectory", 1);
@@ -302,7 +301,7 @@ int main(int argc, char** argv)
       }
     }
 
-    // pose_known = true;
+    pose_known = true;
 
     // Contol loop
     if (map_received && mi_received && pose_known)
