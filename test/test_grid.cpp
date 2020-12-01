@@ -166,7 +166,7 @@ TEST(GridTest, GetCellValue)
   const unsigned int i = 1;
   const unsigned int j = 1;
 
-  ASSERT_EQ(grid_map.getCell(4), 90);
-  ASSERT_EQ(grid_map.getCell(x, y), 90);
-  ASSERT_EQ(grid_map.getCell(i, j), 100);
+  ASSERT_EQ(grid_map.getCell(4), 0.9);
+  ASSERT_EQ(grid_map.getCell(x, y), 0.9);
+  ASSERT_EQ(grid_map.getCell(i, j), 1.0);
 }

@@ -63,11 +63,11 @@ TEST(CartTest, CartWheels2TwistStraight)
   ergodic_exploration::Cart cart(wheel_radius, wheel_base);
 
   const arma::vec u = { 1.0, 1.0 };
-  ergodic_exploration::Twist2D vb = cart.wheels2Twist(u);
+  arma::vec vb = cart.wheels2Twist(u);
 
-  ASSERT_NEAR(vb.vx, 0.033, 1e-6);
-  ASSERT_NEAR(vb.vy, 0.0, 1e-6);
-  ASSERT_NEAR(vb.w, 0.0, 1e-6);
+  ASSERT_NEAR(vb(0), 0.033, 1e-6);
+  ASSERT_NEAR(vb(1), 0.0, 1e-6);
+  ASSERT_NEAR(vb(2), 0.0, 1e-6);
 }
 
 TEST(CartTest, CartWheels2LeftTurn)
@@ -77,11 +77,11 @@ TEST(CartTest, CartWheels2LeftTurn)
   ergodic_exploration::Cart cart(wheel_radius, wheel_base);
 
   const arma::vec u = { -1.0, 1.0 };
-  ergodic_exploration::Twist2D vb = cart.wheels2Twist(u);
+  arma::vec vb = cart.wheels2Twist(u);
 
-  ASSERT_NEAR(vb.vx, 0.0, 1e-6);
-  ASSERT_NEAR(vb.vy, 0.0, 1e-6);
-  ASSERT_NEAR(vb.w, 0.4125, 1e-6);
+  ASSERT_NEAR(vb(0), 0.0, 1e-6);
+  ASSERT_NEAR(vb(1), 0.0, 1e-6);
+  ASSERT_NEAR(vb(2), 0.4125, 1e-6);
 }
 
 TEST(CartTest, CartWheels2RightTurn)
@@ -91,11 +91,11 @@ TEST(CartTest, CartWheels2RightTurn)
   ergodic_exploration::Cart cart(wheel_radius, wheel_base);
 
   const arma::vec u = { 1.0, -1.0 };
-  ergodic_exploration::Twist2D vb = cart.wheels2Twist(u);
+  arma::vec vb = cart.wheels2Twist(u);
 
-  ASSERT_NEAR(vb.vx, 0.0, 1e-6);
-  ASSERT_NEAR(vb.vy, 0.0, 1e-6);
-  ASSERT_NEAR(vb.w, -0.4125, 1e-6);
+  ASSERT_NEAR(vb(0), 0.0, 1e-6);
+  ASSERT_NEAR(vb(1), 0.0, 1e-6);
+  ASSERT_NEAR(vb(2), -0.4125, 1e-6);
 }
 
 TEST(CartTest, SimpleCartKinematics)
@@ -103,7 +103,7 @@ TEST(CartTest, SimpleCartKinematics)
   ergodic_exploration::SimpleCart cart;
 
   const arma::vec x = { 1.0, 2.0, 0.707 };
-  const arma::vec u = { 0.5, 0.01 };
+  const arma::vec u = { 0.5, 0.0, 0.01 };
   const arma::vec xdot = cart(x, u);
 
   ASSERT_NEAR(xdot(0), 0.380156, 1e-6);
@@ -116,7 +116,7 @@ TEST(CartTest, SimpleCartJacobianState)
   ergodic_exploration::SimpleCart cart;
 
   const arma::vec x = { 1.0, 2.0, 0.707 };
-  const arma::vec u = { 0.5, 0.01 };
+  const arma::vec u = { 0.5, 0.0, 0.01 };
   const arma::mat A = cart.fdx(x, u);
 
   ASSERT_NEAR(A(0, 2), -0.324777, 1e-6);
