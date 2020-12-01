@@ -10,8 +10,12 @@
 #include <cmath>
 #include <limits>
 
+#include <nav_msgs/Path.h>
+#include <tf2/LinearMath/Quaternion.h>
+
 #include <ergodic_exploration/grid.hpp>
 #include <ergodic_exploration/collision.hpp>
+#include <ergodic_exploration/numerics.hpp>
 
 namespace ergodic_exploration
 {
@@ -55,7 +59,7 @@ public:
    * @return optimal twist [vx, vy, w]
    * @details u_opt is set to zeros if no solution found
    */
-  vec control(const GridMap& grid, const vec& x0, const vec& vb, const vec& vref);
+  vec control(const GridMap& grid, const vec& x0, const vec& vb, const vec& vref) const;
 
   /**
    * @brief Objective function to minimize
@@ -67,7 +71,16 @@ public:
    * @return true if the twist is collision free
    */
   bool objective(double& cost, const GridMap& grid, const vec& x, const vec& vref,
-                 const vec& u);
+                 const vec& u) const;
+
+  /**
+  * @brief Visulaize path from following twist
+  * @param path - trajectory
+  * @param x - current state
+  * @param u - twist [vx, vy, w]
+  * @param frame - trajectory frame
+  */
+  void path(nav_msgs::Path& path, const vec& x, const vec& u, std::string frame) const;
 
 private:
   Collision collision_;                        // collision detection

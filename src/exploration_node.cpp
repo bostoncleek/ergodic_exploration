@@ -115,7 +115,9 @@ int main(int argc, char** argv)
 
   // ros::Publisher map_pub = nh.advertise<nav_msgs::OccupancyGrid>("map_update", 1, true);
   ros::Publisher cmd_pub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 1);
-  ros::Publisher path_pub = nh.advertise<nav_msgs::Path>("trajectory", 1, true);
+  ros::Publisher path_pub = nh.advertise<nav_msgs::Path>("trajectory", 1);
+  ros::Publisher dwa_path_pub = nh.advertise<nav_msgs::Path>("dwa_trajectory", 1);
+
   ros::Publisher target_pub =
       nh.advertise<visualization_msgs::MarkerArray>("target", 1, true);
 
@@ -267,7 +269,7 @@ int main(int argc, char** argv)
 
       pose(0) = t_map_base.transform.translation.x;
       pose(1) = t_map_base.transform.translation.y;
-      pose(2) = tf2::getYaw(t_map_base.transform.rotation);  // wrapped -PI to PI ?
+      pose(2) = normalize_angle_PI(tf2::getYaw(t_map_base.transform.rotation));  // wrapped -PI to PI ?
       pose_known = true;
     }
 
@@ -323,6 +325,12 @@ int main(int argc, char** argv)
 
           // If dwa fails twist is set to zeros
           u = dwa.control(grid, pose, vb, u);
+
+          nav_msgs::Path dwa_traj;
+          dwa.path(dwa_traj, pose, u, map_frame_id);
+
+          dwa_path_pub.publish(dwa_traj);
+
         }
       }
 
@@ -342,7 +350,7 @@ int main(int argc, char** argv)
       geometry_msgs::Twist twist_msg;
       twist_msg.linear.x = u(0);
       twist_msg.linear.y = u(1);
-      twist_msg.angular.z = u(2) = 0.0;
+      twist_msg.angular.z = u(2);
 
       cmd_pub.publish(twist_msg);
 
