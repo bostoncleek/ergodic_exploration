@@ -306,7 +306,7 @@ void ErgodicControl<ModelT>::path(nav_msgs::Path& path, std::string frame) const
     path.poses.at(i).pose.position.y = traj_(1, i);
 
     tf2::Quaternion quat;
-    quat.setRPY(0.0, 0.0, traj_(2, i));
+    quat.setRPY(0.0, 0.0, normalize_angle_PI(traj_(2, i)));
 
     path.poses.at(i).pose.orientation.x = quat.x();
     path.poses.at(i).pose.orientation.y = quat.y();
