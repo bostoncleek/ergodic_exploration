@@ -365,7 +365,8 @@ void ErgodicControl<ModelT>::configTarget(const GridMap& grid)
 
         const auto idx = grid.grid2RowMajor(gidx.at(0), gidx.at(1));
 
-        phi_vals_(col) = static_cast<double>(mi_data.at(idx));
+        // values [0 100] for visualization purposes
+        phi_vals_(col) = static_cast<double>(mi_data.at(idx)) / 100.0;
         // std::cout << phi_vals_(col) << std::endl;
       }
 
@@ -376,10 +377,11 @@ void ErgodicControl<ModelT>::configTarget(const GridMap& grid)
   }
   // phi_grid_.t().print("phi_grid");
 
-  // spatial fourier coefficients
-  phi_vals_ /= sum(phi_vals_);
+  // phi_vals have already been normalized by range_mi
+  // phi_vals_ /= sum(phi_vals_);
   // std::cout << "sum phi vals: " << sum(phi_vals_) << std::endl;
 
+  // spatial fourier coefficients
   basis_.spatialCoeff(phik_, phi_vals_, phi_grid_);
   // phik_.print("phik_");
 
