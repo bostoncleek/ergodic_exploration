@@ -87,13 +87,13 @@ add_library(${PROJECT_NAME}
 	include/${PROJECT_NAME}/integrator.hpp
 	include/${PROJECT_NAME}/models/cart.hpp
 	include/${PROJECT_NAME}/models/omni.hpp
+	include/${PROJECT_NAME}/numerics.hpp
 	src/${PROJECT_NAME}/basis.cpp
 	src/${PROJECT_NAME}/buffer.cpp
 	src/${PROJECT_NAME}/collision.cpp
 	src/${PROJECT_NAME}/dynamic_window.cpp
 	src/${PROJECT_NAME}/grid.cpp
 	src/${PROJECT_NAME}/mapping.cpp
-	src/${PROJECT_NAME}/numerics.cpp
 	src/${PROJECT_NAME}/target.cpp
 	# src/${PROJECT_NAME}/ergodic_exploration.cpp
 )
