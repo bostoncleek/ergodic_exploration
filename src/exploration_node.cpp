@@ -103,6 +103,7 @@ int main(int argc, char** argv)
   // ros::Publisher map_pub = nh.advertise<nav_msgs::OccupancyGrid>("map_update", 1, true);
   ros::Publisher cmd_pub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 1);
   ros::Publisher path_pub = nh.advertise<nav_msgs::Path>("trajectory", 1, true);
+  ros::Publisher dwa_path_pub = nh.advertise<nav_msgs::Path>("dwa_trajectory", 1);
   ros::Publisher target_pub =
       nh.advertise<visualization_msgs::MarkerArray>("target", 1, true);
 
@@ -208,33 +209,7 @@ int main(int argc, char** argv)
 
   Target target(gaussians);
 
-  // std::cout << buffer_size << std::endl;
-  // std::cout << num_basis << std::endl;
-  // //////////////////////////////////////////////////////////////////////////////
-  // // grid
-  // const auto xmin = -25.0;
-  // const auto xmax = 25.0;
-  // const auto ymin = -25.0;
-  // const auto ymax = 25.0;
-  // const auto resolution = 0.05;
-  // const auto xsize = ergodic_exploration::axis_length(xmin, xmax, resolution);
-  // const auto ysize = ergodic_exploration::axis_length(ymin, ymax, resolution);
-  // std::vector<int8_t> map_data(xsize * ysize, 50);
-  //
-  // GridMap my_grid(xmin, xmax, ymin, ymax, resolution, map_data);
-  // // //////////////////////////////////////////////////////////////////////////////
-  // nav_msgs::OccupancyGrid grid_msg;
-  // grid_msg.header.frame_id = "map";
-  // grid_msg.info.resolution = resolution;
-  // grid_msg.info.width = xsize;
-  // grid_msg.info.height = ysize;
-  // grid_msg.info.origin.position.x = xmin;
-  // grid_msg.info.origin.position.y = ymin;
-  //
-  // // TODO: use TF listener to get transform or param server
-  // const mat Tbs = ergodic_exploration::transform2d(0.393, 0.0);
-  // OccupancyMapper mapper(Tbs);
-  // //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
   Collision collision(boundary_radius, search_radius, obstacle_threshold,
                       occupied_threshold);
 
@@ -260,7 +235,6 @@ int main(int argc, char** argv)
   bool pose_known = false;
   // bool first_map = false;
   ros::Rate rate(frequency);
-  unsigned int i = 0;
   while (nh.ok())
   {
     ros::spinOnce();
@@ -271,7 +245,7 @@ int main(int argc, char** argv)
       t_map_base = tfBuffer.lookupTransform(map_frame_id, base_frame_id, ros::Time(0));
       pose(0) = t_map_base.transform.translation.x;
       pose(1) = t_map_base.transform.translation.y;
-      pose(2) = tf2::getYaw(t_map_base.transform.rotation);  // wrapped -PI to PI ?
+      pose(2) = normalize_angle_PI(tf2::getYaw(t_map_base.transform.rotation));  // wrapped -PI to PI ?
       pose_known = true;
     }
 
@@ -307,6 +281,11 @@ int main(int argc, char** argv)
 
         // If dwa fails twist is set to zeros
         u = dwa.control(grid, pose, vb, u);
+
+        nav_msgs::Path dwa_traj;
+        dwa.path(dwa_traj, pose, u, map_frame_id);
+
+        dwa_path_pub.publish(dwa_traj);
       }
 
       // ROS_INFO_STREAM_NAMED(LOGNAME, "DWA!");
@@ -333,26 +312,7 @@ int main(int argc, char** argv)
       ergodic_control.path(trajectory, map_frame_id);
 
       path_pub.publish(trajectory);
-
-      i++;
-
-      // break;
     }
-
-    // if (scan_update)
-    // {
-    //   if (mapper.updateMap(my_grid, scan, pose))
-    //   {
-    //     grid_msg.data = my_grid.gridData();
-    //     map_pub.publish(grid_msg);
-    //   }
-    //   else
-    //   {
-    //     ROS_ERROR_NAMED(LOGNAME, "Failed to update map");
-    //   }
-    //
-    //   scan_update = false;
-    // }
 
     rate.sleep();
   }

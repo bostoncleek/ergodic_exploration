@@ -57,7 +57,7 @@ DynamicWindow::DynamicWindow(const Collision& collision, double dt, double horiz
 }
 
 vec DynamicWindow::control(const GridMap& grid, const vec& x, const vec& vb,
-                           const vec& vref)
+                           const vec& vref) const
 {
   const auto vdx_low = std::max(vb(0) - acc_lim_x_ * acc_dt_, min_vel_x_);
   const auto vdx_high = std::min(vb(0) + acc_lim_x_ * acc_dt_, max_vel_x_);
@@ -155,12 +155,12 @@ vec DynamicWindow::control(const GridMap& grid, const vec& x, const vec& vb,
 }
 
 bool DynamicWindow::objective(double& cost, const GridMap& grid, const vec& x,
-                              const vec& vref, const vec& u)
+                              const vec& vref, const vec& u) const
 {
   vec pose = x;
   // follow constant twist
   const vec delta = integrate_twist(pose, u, dt_);
-  for (unsigned int t = 0; t < steps_; t++)
+  for (unsigned int i = 0; i < steps_; i++)
   {
     pose += delta;
 
@@ -187,5 +187,30 @@ bool DynamicWindow::objective(double& cost, const GridMap& grid, const vec& x,
   // loss += std::abs(u(2) - max_rot_vel);
 
   return false;
+}
+
+void DynamicWindow::path(nav_msgs::Path& path, const vec& x, const vec& u, std::string frame) const
+{
+  path.header.frame_id = frame;
+  path.poses.resize(steps_);
+
+  vec pose = x;
+  const vec delta = integrate_twist(x, u, dt_);
+
+  for (unsigned int i = 0; i < steps_; i++)
+  {
+    pose += delta;
+
+    path.poses.at(i).pose.position.x = pose(0);
+    path.poses.at(i).pose.position.y = pose(1);
+
+    tf2::Quaternion quat;
+    quat.setRPY(0.0, 0.0, normalize_angle_PI(pose(2)));
+
+    path.poses.at(i).pose.orientation.x = quat.x();
+    path.poses.at(i).pose.orientation.y = quat.y();
+    path.poses.at(i).pose.orientation.z = quat.z();
+    path.poses.at(i).pose.orientation.w = quat.w();
+  }
 }
 }  // namespace ergodic_exploration
