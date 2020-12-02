@@ -6,11 +6,8 @@
  */
 
 #include <iostream>
-#include <variant>
-#include <utility>
 #include <ctime>
 #include <chrono>
-#include <memory>
 
 #include <ros/ros.h>
 #include <ros/console.h>
@@ -40,8 +37,8 @@ using namespace ergodic_exploration;
 constexpr char LOGNAME[] = "ergodic exploration";
 
 static GridMap grid;
-static vec pose = { 0.0, 0.0, 0.0 };
-static vec vb = { 0.0, 0.0, 0.0 };
+static vec pose(3, arma::fill::zeros);
+static vec vb(3, arma::fill::zeros);
 
 static bool map_received = false;
 
@@ -52,35 +49,35 @@ void odomCallback(const nav_msgs::Odometry& msg)
   vb(2) = msg.twist.twist.angular.z;
 }
 
-void modelCallBack(const gazebo_msgs::ModelStates& msg)
-{
-  // store names of all items in gazebo
-  std::vector<std::string> names = msg.name;
-
-  // index of robot
-  int robot_index = 0;
-
-  // find diff_drive robot
-  int ctr = 0;
-  for (const auto& item : names)
-  {
-    // check for robot
-    if (item == "nuridgeback")
-    {
-      robot_index = ctr;
-    }
-
-    ctr++;
-  }
-
-  pose(0) = msg.pose[robot_index].position.x;
-  pose(1) = msg.pose[robot_index].position.y;
-  pose(2) = normalize_angle_PI(tf2::getYaw(msg.pose[robot_index].orientation));
-
-  // std::cout << "Pose gazebo: " << msg.pose[robot_index].position.x <<
-  // " " << msg.pose[robot_index].position.y << " " <<
-  // tf2::getYaw(msg.pose[robot_index].orientation) << std::endl;
-}
+// void modelCallBack(const gazebo_msgs::ModelStates& msg)
+// {
+//   // store names of all items in gazebo
+//   std::vector<std::string> names = msg.name;
+//
+//   // index of robot
+//   int robot_index = 0;
+//
+//   // find diff_drive robot
+//   int ctr = 0;
+//   for (const auto& item : names)
+//   {
+//     // check for robot
+//     if (item == "nuridgeback")
+//     {
+//       robot_index = ctr;
+//     }
+//
+//     ctr++;
+//   }
+//
+//   pose(0) = msg.pose[robot_index].position.x;
+//   pose(1) = msg.pose[robot_index].position.y;
+//   pose(2) = normalize_angle_PI(tf2::getYaw(msg.pose[robot_index].orientation));
+//
+//   // std::cout << "Pose gazebo: " << msg.pose[robot_index].position.x <<
+//   // " " << msg.pose[robot_index].position.y << " " <<
+//   // tf2::getYaw(msg.pose[robot_index].orientation) << std::endl;
+// }
 
 void mapCallback(const nav_msgs::OccupancyGrid::ConstPtr& msg)
 {
@@ -98,11 +95,11 @@ int main(int argc, char** argv)
 
   ros::Subscriber map_sub = nh.subscribe("map", 1, mapCallback);
   ros::Subscriber odom_sub = nh.subscribe("odom", 1, odomCallback);
-  ros::Subscriber model_sub = nh.subscribe("/gazebo/model_states", 1, modelCallBack);
+  // ros::Subscriber model_sub = nh.subscribe("/gazebo/model_states", 1, modelCallBack);
 
   ros::Publisher cmd_pub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 1);
   ros::Publisher path_pub = nh.advertise<nav_msgs::Path>("trajectory", 1, true);
-  ros::Publisher dwa_path_pub = nh.advertise<nav_msgs::Path>("dwa_trajectory", 1);
+  ros::Publisher dwa_path_pub = nh.advertise<nav_msgs::Path>("dwa_trajectory", 1, true);
   ros::Publisher target_pub =
       nh.advertise<visualization_msgs::MarkerArray>("target", 1, true);
 
@@ -117,26 +114,6 @@ int main(int argc, char** argv)
   // motion model
   Omni omni;
   SimpleCart cart;
-
-  // std::variant<Omni, SimpleCart> motion_model;
-  // bool holonomic = true;
-  // // if(!pnh.getParam("holonomic", holonomic))
-  // // {
-  // //   ROS_ERROR_STREAM_NAMED(LOGNAME, "Vechilce type not specified");
-  // //   ros::shutdown();
-  // // }
-  //
-  // if (!holonomic)
-  // {
-  //   Omni omni;
-  //   motion_model = omni;
-  // }
-  //
-  // else
-  // {
-  //   SimpleCart cart;
-  //   motion_model = cart;
-  // }
 
   const auto map_frame_id = pnh.param<std::string>("map_frame_id", "map");
   const auto base_frame_id = pnh.param<std::string>("base_frame_id", "base_link");
@@ -193,6 +170,13 @@ int main(int argc, char** argv)
   const unsigned int vy_samples = pnh.param("vy_samples", 8);
   const unsigned int vth_samples = pnh.param("vth_samples", 5);
 
+  if (dwa_horizon > ec_horizon)
+  {
+    ROS_ERROR_STREAM_NAMED(
+        LOGNAME, "Dynamic window horizon is greater than the ergodic control horizon");
+    ros::shutdown();
+  }
+
   // target
   XmlRpc::XmlRpcValue means;
   XmlRpc::XmlRpcValue sigmas;
@@ -227,78 +211,109 @@ int main(int argc, char** argv)
   target.markers(marker_array, map_frame_id);
   target_pub.publish(marker_array);
 
-  // // vec u = ergodic_control.control(collision, grid, target, pose);
-  vec u = { 0.0, 0.0, 0.0 };
-  // vec uref = { 0.7, 0.0, 0.0 };
+  // const auto steps =  static_cast<unsigned int>(std::abs(ec_horizon / ec_dt));
+  const auto steps = static_cast<unsigned int>(std::abs(dwa_horizon / dwa_dt));
+
+  mat ut, opt_traj;
+  vec u(3, arma::fill::zeros);
+
+  unsigned int i = 0;
 
   bool pose_known = false;
-  // bool first_map = false;
+  bool follow_dwa = false;
+
   ros::Rate rate(frequency);
   while (nh.ok())
   {
     ros::spinOnce();
 
     // Update pose
-    // try
-    // {
-    //   t_map_base = tfBuffer.lookupTransform(map_frame_id, base_frame_id, ros::Time(0));
-    //   pose(0) = t_map_base.transform.translation.x;
-    //   pose(1) = t_map_base.transform.translation.y;
-    //   pose(2) = normalize_angle_PI(tf2::getYaw(t_map_base.transform.rotation));  // wrapped -PI to PI ?
-    //   pose_known = true;
-    // }
-    //
-    // catch (tf2::TransformException& ex)
-    // {
-    //   ROS_WARN_NAMED(LOGNAME, "%s", ex.what());
-    //   // continue;
-    // }
+    try
+    {
+      t_map_base = tfBuffer.lookupTransform(map_frame_id, base_frame_id, ros::Time(0));
+      pose(0) = t_map_base.transform.translation.x;
+      pose(1) = t_map_base.transform.translation.y;
+      pose(2) = normalize_angle_PI(tf2::getYaw(t_map_base.transform.rotation));
 
-    pose_known = true;
+      // Add state to memory
+      ergodic_control.addStateMemory(pose);
+
+      pose_known = true;
+    }
+
+    catch (tf2::TransformException& ex)
+    {
+      ROS_WARN_NAMED(LOGNAME, "%s", ex.what());
+      // continue;
+    }
+
+    // pose_known = true;
+    // ergodic_control.addStateMemory(pose);
 
     // Contol loop
     if (map_received && pose_known)
     {
-      // auto t_start = std::chrono::high_resolution_clock::now();
+      if (follow_dwa)
+      {
+        i++;
 
-      // if (!first_map)
-      // {
-      //   ergodic_control.configTarget(grid);
-      //   first_map = true;
-      // }
-      //
-      // if (i == 5)
-      // {
-      //   ergodic_control.configTarget(grid);
-      //   i = 0;
-      // }
+        if (i == steps)
+        {
+          follow_dwa = false;
+        }
 
-      u = ergodic_control.control(grid, pose);
+        else
+        {
+          ROS_INFO_NAMED(LOGNAME, "Following DWA! %u ", i);
+          // u.print("u");
+        }
+      }
+
+      else
+      {
+        u = ergodic_control.control(grid, pose);
+        // ergodic_control.controlSignal(ut);
+
+        nav_msgs::Path trajectory;
+        ergodic_control.path(trajectory, pose, map_frame_id);
+
+        // ROS_INFO_STREAM_NAMED(LOGNAME, "Publish traj");
+
+        path_pub.publish(trajectory);
+      }
+
       if (!validate_control(collision, grid, pose, u, val_dt, val_horizon))
       {
         ROS_INFO_STREAM_NAMED(LOGNAME, "Collision detected! Enabling DWA!");
 
-        // If dwa fails twist is set to zeros
-        u = dwa.control(grid, pose, vb, u);
+        if (follow_dwa)
+        {
+          ROS_WARN_STREAM_NAMED(LOGNAME, "Collision from DWA!");
+          // If dwa fails twist is set to zeros
+          u = dwa.control(grid, pose, vb, u);
+
+          // TODO: terminate follow dwa here?
+          follow_dwa = false;
+        }
+
+        else
+        {
+          ROS_WARN_STREAM_NAMED(LOGNAME, "Collision from Ergodic Control!");
+          // Assume the collision is a result of u from ec not dwa
+          ergodic_control.optTraj(opt_traj, pose);
+          u = dwa.control(grid, pose, vb, opt_traj, ec_dt);
+
+
+          follow_dwa = true;
+          i = 0;
+          ROS_INFO_NAMED(LOGNAME, "Following DWA! %u ", i);
+        }
 
         nav_msgs::Path dwa_traj;
         dwa.path(dwa_traj, pose, u, map_frame_id);
 
         dwa_path_pub.publish(dwa_traj);
       }
-
-      // ROS_INFO_STREAM_NAMED(LOGNAME, "DWA!");
-
-      // vec u = dwa.control(grid, pose, vb, uref);
-
-      // u.print("u_t:");
-
-      // auto t_end = std::chrono::high_resolution_clock::now();
-      // std::cout
-      //     << "Hz: "
-      //     << 1.0 / (std::chrono::duration<double, std::milli>(t_end - t_start).count() /
-      //               1000.0)
-      //     << std::endl;
 
       geometry_msgs::Twist twist_msg;
       twist_msg.linear.x = u(0);
@@ -307,11 +322,6 @@ int main(int argc, char** argv)
       // twist_msg.angular.z = 0.0;
 
       cmd_pub.publish(twist_msg);
-
-      nav_msgs::Path trajectory;
-      ergodic_control.path(trajectory, map_frame_id);
-
-      path_pub.publish(trajectory);
     }
 
     rate.sleep();
