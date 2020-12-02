@@ -136,7 +136,7 @@ struct SimpleCart
       throw std::invalid_argument("Invalid twist y-velocity must be 0.");
     }
 
-    return { u(0) * std::cos(x(2)), u(0) * std::sin(x(2)), normalize_angle_PI(u(2)) };
+    return { u(0) * std::cos(x(2)), u(0) * std::sin(x(2)), u(2) };
   }
 
   /**
