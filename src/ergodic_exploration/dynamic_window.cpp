@@ -163,6 +163,7 @@ bool DynamicWindow::objective(double& cost, const GridMap& grid, const vec& x,
   for (unsigned int i = 0; i < steps_; i++)
   {
     pose += delta;
+    pose(2) = normalize_angle_PI(pose(2));
 
     auto dmin = std::numeric_limits<double>::max();
     if (collision_.minDistance(dmin, grid, pose) == CollisionMsg::crash)

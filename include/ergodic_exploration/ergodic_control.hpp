@@ -233,14 +233,19 @@ vec ErgodicControl<ModelT>::control(const GridMap& grid, const vec& x)
 
   //////////////////////////////////////////////////////////////////////////////
   // DEBUG
-  // for (unsigned int i = 0; i < xt_total.n_cols; i++)
-  // {
-  //   if (xt_total(0, i) < 0.0 || xt_total(1, i) < 0.0)
-  //   {
-  //     std::cout << "WARNING: Trajectory is not within fourier domain" << std::endl;
-  //     // xt_total.rows(0, 1).print();
-  //   }
-  // }
+  for (unsigned int i = 0; i < xt_total.n_cols; i++)
+  {
+    if (xt_total(2, i) < -PI|| xt_total(2, i) > PI)
+    {
+        std::cout << "WARNING: heading is not normalized" << std::endl;
+    }
+
+    // if (xt_total(0, i) < 0.0 || xt_total(1, i) < 0.0)
+    // {
+    //   std::cout << "WARNING: Trajectory is not within fourier domain" << std::endl;
+    //   // xt_total.rows(0, 1).print();
+    // }
+  }
   //////////////////////////////////////////////////////////////////////////////
 
   // Extract optimized trajectory in fourier domain

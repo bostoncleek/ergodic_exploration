@@ -143,7 +143,8 @@ struct Omni
   {
     const auto xdot = u(0) * std::cos(x(2)) - u(1) * std::sin(x(2));
     const auto ydot = u(0) * std::sin(x(2)) + u(1) * std::cos(x(2));
-    return { xdot, ydot, u(2) };
+    return { xdot, ydot, normalize_angle_PI(u(2)) };
+    // return { xdot, ydot, 0.0 };
   }
 
   /**

@@ -52,35 +52,35 @@ void odomCallback(const nav_msgs::Odometry& msg)
   vb(2) = msg.twist.twist.angular.z;
 }
 
-// void modelCallBack(const gazebo_msgs::ModelStates& msg)
-// {
-//   // store names of all items in gazebo
-//   std::vector<std::string> names = msg.name;
-//
-//   // index of robot
-//   int robot_index = 0;
-//
-//   // find diff_drive robot
-//   int ctr = 0;
-//   for (const auto& item : names)
-//   {
-//     // check for robot
-//     if (item == "nuridgeback")
-//     {
-//       robot_index = ctr;
-//     }
-//
-//     ctr++;
-//   }
-//
-//   // pose(0) = msg.pose[robot_index].position.x;
-//   // pose(1) = msg.pose[robot_index].position.y;
-//   // pose(2) = tf2::getYaw(msg.pose[robot_index].orientation);
-//
-//   // std::cout << "Pose gazebo: " << msg.pose[robot_index].position.x <<
-//   // " " << msg.pose[robot_index].position.y << " " <<
-//   // tf2::getYaw(msg.pose[robot_index].orientation) << std::endl;
-// }
+void modelCallBack(const gazebo_msgs::ModelStates& msg)
+{
+  // store names of all items in gazebo
+  std::vector<std::string> names = msg.name;
+
+  // index of robot
+  int robot_index = 0;
+
+  // find diff_drive robot
+  int ctr = 0;
+  for (const auto& item : names)
+  {
+    // check for robot
+    if (item == "nuridgeback")
+    {
+      robot_index = ctr;
+    }
+
+    ctr++;
+  }
+
+  pose(0) = msg.pose[robot_index].position.x;
+  pose(1) = msg.pose[robot_index].position.y;
+  pose(2) = normalize_angle_PI(tf2::getYaw(msg.pose[robot_index].orientation));
+
+  // std::cout << "Pose gazebo: " << msg.pose[robot_index].position.x <<
+  // " " << msg.pose[robot_index].position.y << " " <<
+  // tf2::getYaw(msg.pose[robot_index].orientation) << std::endl;
+}
 
 void mapCallback(const nav_msgs::OccupancyGrid::ConstPtr& msg)
 {
@@ -98,9 +98,8 @@ int main(int argc, char** argv)
 
   ros::Subscriber map_sub = nh.subscribe("map", 1, mapCallback);
   ros::Subscriber odom_sub = nh.subscribe("odom", 1, odomCallback);
-  // ros::Subscriber model_sub = nh.subscribe("/gazebo/model_states", 1, modelCallBack);
+  ros::Subscriber model_sub = nh.subscribe("/gazebo/model_states", 1, modelCallBack);
 
-  // ros::Publisher map_pub = nh.advertise<nav_msgs::OccupancyGrid>("map_update", 1, true);
   ros::Publisher cmd_pub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 1);
   ros::Publisher path_pub = nh.advertise<nav_msgs::Path>("trajectory", 1, true);
   ros::Publisher dwa_path_pub = nh.advertise<nav_msgs::Path>("dwa_trajectory", 1);
@@ -240,22 +239,22 @@ int main(int argc, char** argv)
     ros::spinOnce();
 
     // Update pose
-    try
-    {
-      t_map_base = tfBuffer.lookupTransform(map_frame_id, base_frame_id, ros::Time(0));
-      pose(0) = t_map_base.transform.translation.x;
-      pose(1) = t_map_base.transform.translation.y;
-      pose(2) = normalize_angle_PI(tf2::getYaw(t_map_base.transform.rotation));  // wrapped -PI to PI ?
-      pose_known = true;
-    }
+    // try
+    // {
+    //   t_map_base = tfBuffer.lookupTransform(map_frame_id, base_frame_id, ros::Time(0));
+    //   pose(0) = t_map_base.transform.translation.x;
+    //   pose(1) = t_map_base.transform.translation.y;
+    //   pose(2) = normalize_angle_PI(tf2::getYaw(t_map_base.transform.rotation));  // wrapped -PI to PI ?
+    //   pose_known = true;
+    // }
+    //
+    // catch (tf2::TransformException& ex)
+    // {
+    //   ROS_WARN_NAMED(LOGNAME, "%s", ex.what());
+    //   // continue;
+    // }
 
-    catch (tf2::TransformException& ex)
-    {
-      ROS_WARN_NAMED(LOGNAME, "%s", ex.what());
-      // continue;
-    }
-
-    // pose_known = true;
+    pose_known = true;
 
     // Contol loop
     if (map_received && pose_known)
@@ -305,6 +304,7 @@ int main(int argc, char** argv)
       twist_msg.linear.x = u(0);
       twist_msg.linear.y = u(1);
       twist_msg.angular.z = u(2);
+      // twist_msg.angular.z = 0.0;
 
       cmd_pub.publish(twist_msg);
 
