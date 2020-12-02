@@ -1,4 +1,16 @@
 <launch>
+  <arg name="load_map" default="false"/>
+
+  <group if="$(arg load_map)">
+    <arg name="map" default="$(find ergodic_exploration)/maps/maze.yaml"/>
+
+    <node pkg="map_server" name="map_server" type="map_server"
+          args="$(arg map)"/>
+
+    <node pkg="tf2_ros" type="static_transform_publisher"
+      name="map_to_odom" args="0 0 0 0 0 0 1 map odom"/>
+  </group>
+
   <node pkg="ergodic_exploration" type="exploration" name="exploration" output="screen">
     <rosparam command="load" file="$(find ergodic_exploration)/config/explore.yaml" />
     <!-- <remap from="map"                      to="/ridgeback/rtabmap/octomap_grid"/> -->
