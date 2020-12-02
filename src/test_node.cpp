@@ -40,7 +40,7 @@ int main(int argc, char** argv)
 
   ros::Publisher map_pub = nh.advertise<nav_msgs::OccupancyGrid>("map", 1, true);
   ros::Publisher pose_pub = nh.advertise<geometry_msgs::PoseStamped>("robot", 1, true);
-  ros::Publisher path_pub = nh.advertise<nav_msgs::Path>("trajectory", 1, true);
+  // ros::Publisher path_pub = nh.advertise<nav_msgs::Path>("trajectory", 1, true);
   ros::Publisher target_pub =
       nh.advertise<visualization_msgs::MarkerArray>("target", 1, true);
 
@@ -179,10 +179,10 @@ int main(int argc, char** argv)
 
     pose_pub.publish(pose_bot);
 
-    nav_msgs::Path trajectory;
-    ergodic_control.path(trajectory, "map");
-
-    path_pub.publish(trajectory);
+    // nav_msgs::Path trajectory;
+    // ergodic_control.path(trajectory, "map");
+    //
+    // path_pub.publish(trajectory);
 
     rate.sleep();
   }
