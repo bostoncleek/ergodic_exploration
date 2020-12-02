@@ -18,6 +18,8 @@
 
 namespace ergodic_exploration
 {
+using arma::mat;
+
 /** @brief Dynamic window approach */
 class DynamicWindow
 {
@@ -60,26 +62,32 @@ public:
    */
   vec control(const GridMap& grid, const vec& x0, const vec& vb, const vec& vref) const;
 
+  vec control(const GridMap& grid, const vec& x0, const vec& vb, const mat& xt_ref,
+              double delta) const;
+
   /**
    * @brief Objective function to minimize
    * @param cost[out] - cost of objective function
    * @param grid - grid map
-   * @param x - current state [x, y, theta]
+   * @param x0 - current state [x, y, theta]
    * @param vref - desired twist to follow [vx, vy, w]
    * @param u - twist from dynamic window
    * @return true if the twist is collision free
    */
-  bool objective(double& cost, const GridMap& grid, const vec& x, const vec& vref,
+  bool objective(double& cost, const GridMap& grid, const vec& x0, const vec& vref,
                  const vec& u) const;
 
- /**
- * @brief Visulaize path from following twist
- * @param path - trajectory
- * @param x - current state
- * @param u - twist [vx, vy, w]
- * @param frame - trajectory frame
- */
- void path(nav_msgs::Path& path, const vec& x, const vec& u, std::string frame) const;
+  bool objective(double& cost, const GridMap& grid, const vec& x0, const vec& u,
+                 const mat& xt_ref, double tf) const;
+
+  /**
+   * @brief Visulaize path from following twist
+   * @param path - trajectory
+   * @param x - current state
+   * @param u - twist [vx, vy, w]
+   * @param frame - trajectory frame
+   */
+  void path(nav_msgs::Path& path, const vec& x, const vec& u, std::string frame) const;
 
 private:
   Collision collision_;                        // collision detection
