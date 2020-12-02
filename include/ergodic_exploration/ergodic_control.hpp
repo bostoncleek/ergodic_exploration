@@ -99,12 +99,18 @@ public:
    */
   vec control(const GridMap& grid, const vec& x);
 
+  void controlSignal(mat& ut) const;
+
+  void optTraj(mat& opt_traj, const vec& x) const;
+
+  void addStateMemory(const vec& x);
+
   /**
    * @brief Previous optimized trajectory
    * @param path - trajectory
    * @param frame - trajectory frame
    */
-  void path(nav_msgs::Path& path, std::string frame) const;
+  void path(nav_msgs::Path& path, const vec x, std::string frame) const;
 
   /**
    * @brief Set the target distribution
@@ -233,19 +239,19 @@ vec ErgodicControl<ModelT>::control(const GridMap& grid, const vec& x)
 
   //////////////////////////////////////////////////////////////////////////////
   // DEBUG
-  for (unsigned int i = 0; i < xt_total.n_cols; i++)
-  {
-    if (xt_total(2, i) < -PI|| xt_total(2, i) > PI)
-    {
-        std::cout << "WARNING: heading is not normalized" << std::endl;
-    }
-
-    // if (xt_total(0, i) < 0.0 || xt_total(1, i) < 0.0)
-    // {
-    //   std::cout << "WARNING: Trajectory is not within fourier domain" << std::endl;
-    //   // xt_total.rows(0, 1).print();
-    // }
-  }
+  // for (unsigned int i = 0; i < xt_total.n_cols; i++)
+  // {
+  //   if (xt_total(2, i) < -PI|| xt_total(2, i) > PI)
+  //   {
+  //       std::cout << "WARNING: heading is not normalized" << std::endl;
+  //   }
+  //
+  //   // if (xt_total(0, i) < 0.0 || xt_total(1, i) < 0.0)
+  //   // {
+  //   //   std::cout << "WARNING: Trajectory is not within fourier domain" << std::endl;
+  //   //   // xt_total.rows(0, 1).print();
+  //   // }
+  // }
   //////////////////////////////////////////////////////////////////////////////
 
   // Extract optimized trajectory in fourier domain
@@ -295,23 +301,49 @@ vec ErgodicControl<ModelT>::control(const GridMap& grid, const vec& x)
   updateControl(xt, rhot);
 
   // Store current state in frame of map
-  buffer_.append(x);
+  // buffer_.append(x);
 
   return ut_.col(0);
 }
 
 template <class ModelT>
-void ErgodicControl<ModelT>::path(nav_msgs::Path& path, std::string frame) const
+void ErgodicControl<ModelT>::controlSignal(mat& ut) const
+{
+  ut = ut_;
+}
+
+template <class ModelT>
+void ErgodicControl<ModelT>::optTraj(mat& opt_traj, const vec& x) const
+{
+  RungeKutta rk4(dt_);
+  opt_traj.resize(model_.state_space, steps_);
+  rk4.solve(opt_traj, model_, x, ut_, horizon_);
+}
+
+template <class ModelT>
+void ErgodicControl<ModelT>::addStateMemory(const vec& x)
+{
+  buffer_.append(x);
+}
+
+template <class ModelT>
+void ErgodicControl<ModelT>::path(nav_msgs::Path& path, const vec x,
+                                  std::string frame) const
 {
   path.header.frame_id = frame;
-  path.poses.resize(traj_.n_cols);
-  for (unsigned int i = 0; i < traj_.n_cols; i++)
+  path.poses.resize(steps_);
+
+  RungeKutta rk4(dt_);
+  mat opt_traj(model_.state_space, steps_);
+  rk4.solve(opt_traj, model_, x, ut_, horizon_);
+
+  for (unsigned int i = 0; i < opt_traj.n_cols; i++)
   {
-    path.poses.at(i).pose.position.x = traj_(0, i);
-    path.poses.at(i).pose.position.y = traj_(1, i);
+    path.poses.at(i).pose.position.x = opt_traj(0, i);
+    path.poses.at(i).pose.position.y = opt_traj(1, i);
 
     tf2::Quaternion quat;
-    quat.setRPY(0.0, 0.0, normalize_angle_PI(traj_(2, i)));
+    quat.setRPY(0.0, 0.0, normalize_angle_PI(opt_traj(2, i)));
 
     path.poses.at(i).pose.orientation.x = quat.x();
     path.poses.at(i).pose.orientation.y = quat.y();
