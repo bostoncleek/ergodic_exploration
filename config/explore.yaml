@@ -1,8 +1,8 @@
 ## common control
 # holonomic: vehicle is holonomic
 # frequency: control loop frequency (Hz)
-# val_dt: ergodic control validation time step for collision detection (s)
-# val_horizon: ergodic control validation horizon for collision detection (s)
+# val_dt: control validation time step for collision detection (s)
+# val_horizon: control validation horizon for collision detection (s)
 # max_vel_x: max x velcocity (m/s)
 # max_vel_y: max y velcocity (m/s)
 # max_rot_vel: max ratotional velcocity (m/s)
@@ -49,7 +49,7 @@ occupied_threshold: 0.8
 # batch_size: number of past states randomly sampled in each control loop
 # control_weights: weights on twist [vx vy w]
 ec_dt: 0.1
-ec_horizon: 8.0
+ec_horizon: 5.0
 target_resolution: 0.1
 expl_weight: 1.0
 num_basis: 10
@@ -65,7 +65,7 @@ control_weights: [1.0, 1.0, 0.5]
 # vy_samples: number of y velcocity samples
 # vth_samples: number of rotational velcocity samples
 dwa_dt: 0.1
-dwa_horizon: 1.5
+dwa_horizon: 2.0
 acc_dt: 0.2
 vx_samples: 3
 vy_samples: 8

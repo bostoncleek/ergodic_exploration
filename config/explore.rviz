@@ -101,70 +101,10 @@ Visualization Manager:
       Use rainbow: true
       Value: false
     - Class: rviz/TF
-      Enabled: true
+      Enabled: false
       Frame Timeout: 15
       Frames:
         All Enabled: false
-        axle_link:
-          Value: true
-        base_link:
-          Value: true
-        bb2_left_optical_link:
-          Value: true
-        bb2_mesh:
-          Value: true
-        bb2_optical_link:
-          Value: true
-        bb2_origin:
-          Value: true
-        chassis_link:
-          Value: true
-        controller_enclosure:
-          Value: true
-        front_cover_link:
-          Value: true
-        front_laser:
-          Value: true
-        front_left_wheel_link:
-          Value: true
-        front_lights_link:
-          Value: true
-        front_right_wheel_link:
-          Value: true
-        front_rocker_link:
-          Value: true
-        imu_link:
-          Value: true
-        left_side_cover_link:
-          Value: true
-        map:
-          Value: true
-        mid_mount:
-          Value: true
-        mount_link:
-          Value: true
-        odom:
-          Value: true
-        rear_cover_link:
-          Value: true
-        rear_laser:
-          Value: true
-        rear_left_wheel_link:
-          Value: true
-        rear_lights_link:
-          Value: true
-        rear_right_wheel_link:
-          Value: true
-        rear_rocker_link:
-          Value: true
-        right_side_cover_link:
-          Value: true
-        top_link:
-          Value: true
-        velodyne_mesh:
-          Value: true
-        velodyne_scan:
-          Value: true
       Marker Alpha: 1
       Marker Scale: 1
       Name: TF
@@ -172,56 +112,9 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        map:
-          odom:
-            base_link:
-              chassis_link:
-                axle_link:
-                  front_rocker_link:
-                    front_left_wheel_link:
-                      {}
-                    front_right_wheel_link:
-                      {}
-                  rear_rocker_link:
-                    rear_left_wheel_link:
-                      {}
-                    rear_right_wheel_link:
-                      {}
-                front_cover_link:
-                  {}
-                front_laser:
-                  {}
-                front_lights_link:
-                  {}
-                imu_link:
-                  {}
-                left_side_cover_link:
-                  {}
-                rear_cover_link:
-                  {}
-                rear_laser:
-                  {}
-                rear_lights_link:
-                  {}
-                right_side_cover_link:
-                  {}
-                top_link:
-                  {}
-              mid_mount:
-                bb2_mesh:
-                  bb2_origin:
-                    bb2_optical_link:
-                      bb2_left_optical_link:
-                        {}
-                controller_enclosure:
-                  {}
-                velodyne_mesh:
-                  velodyne_scan:
-                    {}
-              mount_link:
-                {}
+        {}
       Update Interval: 0
-      Value: true
+      Value: false
     - Alpha: 0.699999988079071
       Class: rviz/Map
       Color Scheme: map
