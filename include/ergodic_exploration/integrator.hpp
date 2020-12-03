@@ -112,6 +112,7 @@ void RungeKutta::solve(mat& xt, const ModelT& model, const vec& x0, const mat& u
   for (unsigned int i = 0; i < steps; i++)
   {
     x = step(model, x, ut.col(i));
+    x(2) = normalize_angle_PI(x(2));
     xt.col(i) = x;
   }
 }

@@ -15,7 +15,7 @@
 holonomic: true
 frequency: 10.0
 val_dt: 0.1
-val_horizon: 0.5
+val_horizon: 0.2
 
 max_vel_x: 1.0
 max_vel_y: 1.0
@@ -49,13 +49,13 @@ occupied_threshold: 0.8
 # batch_size: number of past states randomly sampled in each control loop
 # control_weights: weights on twist [vx vy w]
 ec_dt: 0.1
-ec_horizon: 8.0
+ec_horizon: 5.0
 target_resolution: 0.1
 expl_weight: 1.0
 num_basis: 10
 buffer_size: 1000000
-batch_size: 100
-control_weights: [1.0, 1.0, 0.5]
+batch_size: 1000
+control_weights: [1000.0, 1000.0, 2000.0]
 
 ## dynamic window
 # dwa_dt: time step used in integration (s)
@@ -65,16 +65,8 @@ control_weights: [1.0, 1.0, 0.5]
 # vy_samples: number of y velcocity samples
 # vth_samples: number of rotational velcocity samples
 dwa_dt: 0.1
-dwa_horizon: 1.5
+dwa_horizon: 4.0
 acc_dt: 0.2
 vx_samples: 3
 vy_samples: 8
 vth_samples: 5
-
-## targets
-# means: x and y means (m)
-# sigmas: x and y standard deviations (m)
-# means: [[2.5, 2.5], [8.5, 2.5], [-5.0, 8.0]]
-# sigmas: [[1.5, 1.5], [1.5, 1.5], [1.5, 1.5]]
-means: [[2.5, 2.5], [8.5, 2.5]]
-sigmas: [[1.5, 1.5], [1.5, 1.5]]

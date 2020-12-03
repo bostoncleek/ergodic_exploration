@@ -10,6 +10,8 @@
 #include <cmath>
 #include <armadillo>
 
+#include <ergodic_exploration/numerics.hpp>
+
 namespace ergodic_exploration
 {
 using arma::mat;
@@ -167,9 +169,10 @@ struct Omni
    */
   mat fdu(const vec x) const
   {
-    mat B = { { std::cos(x(2)), -std::sin(x(2)), 0.0 },
-              { std::sin(x(2)), std::cos(x(2)), 0.0 },
-              { 0.0, 0.0, 1.0 } };
+    // mat B(3,3, arma::fill::eye);
+    const mat B = { { std::cos(x(2)), -std::sin(x(2)), 0.0 },
+                    { std::sin(x(2)), std::cos(x(2)), 0.0 },
+                    { 0.0, 0.0, 1.0 } };
     return B;
   }
 

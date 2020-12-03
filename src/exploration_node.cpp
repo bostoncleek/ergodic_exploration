@@ -40,8 +40,8 @@ using namespace ergodic_exploration;
 constexpr char LOGNAME[] = "ergodic exploration";
 
 static GridMap grid, mi_grid;
-static vec pose = { 0.0, 0.0, 0.0 };
-static vec vb = { 0.0, 0.0, 0.0 };
+static vec pose(3, arma::fill::zeros);
+static vec vb(3, arma::fill::zeros);
 static double distance_traveled = 0.0;
 
 static bool map_received = false;
@@ -117,11 +117,7 @@ int main(int argc, char** argv)
   ros::Publisher path_pub = nh.advertise<nav_msgs::Path>("trajectory", 1);
   ros::Publisher dwa_path_pub = nh.advertise<nav_msgs::Path>("dwa_trajectory", 1);
 
-  ros::Publisher target_pub =
-      nh.advertise<visualization_msgs::MarkerArray>("target", 1, true);
-
   ros::ServiceClient mi_client = nh.serviceClient<std_srvs::Empty>("start_mi");
-
 
   tf2_ros::Buffer tfBuffer;
   tf2_ros::TransformListener tfListener(tfBuffer);
@@ -134,26 +130,6 @@ int main(int argc, char** argv)
   // motion model
   Omni omni;
   SimpleCart cart;
-
-  // std::variant<Omni, SimpleCart> motion_model;
-  // bool holonomic = true;
-  // // if(!pnh.getParam("holonomic", holonomic))
-  // // {
-  // //   ROS_ERROR_STREAM_NAMED(LOGNAME, "Vechilce type not specified");
-  // //   ros::shutdown();
-  // // }
-  //
-  // if (!holonomic)
-  // {
-  //   Omni omni;
-  //   motion_model = omni;
-  // }
-  //
-  // else
-  // {
-  //   SimpleCart cart;
-  //   motion_model = cart;
-  // }
 
   const auto map_frame_id = pnh.param<std::string>("map_frame_id", "map");
   const auto base_frame_id = pnh.param<std::string>("base_frame_id", "base_link");
@@ -210,20 +186,12 @@ int main(int argc, char** argv)
   const unsigned int vy_samples = pnh.param("vy_samples", 8);
   const unsigned int vth_samples = pnh.param("vth_samples", 5);
 
-  // target
-  XmlRpc::XmlRpcValue means;
-  XmlRpc::XmlRpcValue sigmas;
-  pnh.getParam("means", means);
-  pnh.getParam("sigmas", sigmas);
-  const auto num_targets = static_cast<unsigned int>(means.size());
-
-  GaussianList gaussians(num_targets);
-  for (unsigned int i = 0; i < num_targets; i++)
+  if (dwa_horizon > ec_horizon)
   {
-    gaussians.at(i) = { { means[i][0], means[i][1] }, { sigmas[i][0], sigmas[i][1] } };
+    ROS_ERROR_STREAM_NAMED(
+        LOGNAME, "Dynamic window horizon is greater than the ergodic control horizon");
+    ros::shutdown();
   }
-
-  Target target(gaussians);
 
   //////////////////////////////////////////////////////////////////////////////
   Collision collision(boundary_radius, search_radius, obstacle_threshold,
@@ -236,27 +204,23 @@ int main(int argc, char** argv)
   DynamicWindow dwa(collision, dwa_dt, dwa_horizon, acc_dt, acc_lim_x, acc_lim_y,
                     acc_lim_th, max_vel_x, min_vel_x, max_vel_y, min_vel_y, max_rot_vel,
                     min_rot_vel, vx_samples, vy_samples, vth_samples);
-  // //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+  const auto steps = static_cast<unsigned int>(std::abs(dwa_horizon / dwa_dt));
+  unsigned int i = 0;
 
-  ergodic_control.setTarget(target);
-
-  visualization_msgs::MarkerArray marker_array;
-  target.markers(marker_array, map_frame_id);
-  target_pub.publish(marker_array);
-
-  vec u = { 0.0, 0.0, 0.0 };
+  mat opt_traj;
+  vec u(3, arma::fill::zeros);
 
   bool pose_known = false;
   bool target_set = false;
   bool update_target = false;
   bool update_mi = true;
+  bool follow_dwa = false;
 
   ros::Rate rate(frequency);
   while (nh.ok())
   {
     ros::spinOnce();
-
-    // pose_known = true;
 
     // Update pose
     try
@@ -268,7 +232,11 @@ int main(int argc, char** argv)
 
       pose(0) = t_map_base.transform.translation.x;
       pose(1) = t_map_base.transform.translation.y;
-      pose(2) = normalize_angle_PI(tf2::getYaw(t_map_base.transform.rotation));  // wrapped -PI to PI ?
+      pose(2) = normalize_angle_PI(tf2::getYaw(t_map_base.transform.rotation));
+
+      // Add state to memory
+      ergodic_control.addStateMemory(pose);
+
       pose_known = true;
     }
 
@@ -277,6 +245,9 @@ int main(int argc, char** argv)
       ROS_WARN_NAMED(LOGNAME, "%s", ex.what());
       // continue;
     }
+
+    // pose_known = true;
+    // ergodic_control.addStateMemory(pose);
 
     // TODO: Check if map has grown and if so update mi
     if (distance_traveled > 5.0)
@@ -312,39 +283,92 @@ int main(int argc, char** argv)
         update_target = false;
       }
 
+      // MI target distribution must be set
       if (target_set)
       {
-        u = ergodic_control.control(grid, pose);
+        // Choose control strategy
+        if (follow_dwa)
+        {
+          i++;
+
+          if (i == steps)
+          {
+            follow_dwa = false;
+          }
+
+          else
+          {
+            ROS_INFO_NAMED(LOGNAME, "Following DWA! %u ", i);
+            // u.print("u");
+          }
+        }
+
+        else
+        {
+          u = ergodic_control.control(pose);
+          // ergodic_control.controlSignal(ut);
+
+          nav_msgs::Path trajectory;
+          ergodic_control.path(trajectory, pose, map_frame_id);
+
+          // ROS_INFO_STREAM_NAMED(LOGNAME, "Publish traj");
+
+          path_pub.publish(trajectory);
+        }
+
+        // Validate control whether it is from the ergodic controller or dwa
         if (!validate_control(collision, grid, pose, u, val_dt, val_horizon))
         {
           ROS_INFO_STREAM_NAMED(LOGNAME, "Collision detected! Enabling DWA!");
 
-          // If dwa fails twist is set to zeros
-          u = dwa.control(grid, pose, vb, u);
+          // The collision was a result of the last dwa control
+          // Use the last dwa control as a reference
+          if (follow_dwa)
+          {
+            ROS_WARN_STREAM_NAMED(LOGNAME, "Collision from DWA!");
+            // If dwa fails twist is set to zeros
+            u = dwa.control(grid, pose, vb, u);
+
+            // TODO: terminate follow dwa here?
+            follow_dwa = false;
+          }
+
+          // The collision was a result of the ergodic controller
+          // Use the optimized trajectory as reference
+          else
+          {
+            ROS_WARN_STREAM_NAMED(LOGNAME, "Collision from Ergodic Control!");
+            // Assume the collision is a result of u from ec not dwa
+            ergodic_control.optTraj(opt_traj, pose);
+            u = dwa.control(grid, pose, vb, opt_traj, ec_dt);
+
+
+            follow_dwa = true;
+            i = 0;
+            ROS_INFO_NAMED(LOGNAME, "Following DWA! %u ", i);
+          }
 
           nav_msgs::Path dwa_traj;
           dwa.path(dwa_traj, pose, u, map_frame_id);
 
           dwa_path_pub.publish(dwa_traj);
 
-        }
-      }
+        } // end validate control
+      } // end target set
 
       geometry_msgs::Twist twist_msg;
       twist_msg.linear.x = u(0);
       twist_msg.linear.y = u(1);
       twist_msg.angular.z = u(2);
+      // u.print("u");
+
 
       cmd_pub.publish(twist_msg);
 
-      nav_msgs::Path trajectory;
-      ergodic_control.path(trajectory, map_frame_id);
-
-      path_pub.publish(trajectory);
-    }
+    } // end control loop
 
     rate.sleep();
-  }
+  } // end while loop
 
   ros::waitForShutdown();
   ROS_INFO_STREAM_NAMED(LOGNAME, "Shutting down.");

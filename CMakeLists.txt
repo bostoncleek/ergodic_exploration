@@ -93,9 +93,7 @@ add_library(${PROJECT_NAME}
 	src/${PROJECT_NAME}/dynamic_window.cpp
 	src/${PROJECT_NAME}/grid.cpp
 	src/${PROJECT_NAME}/mapping.cpp
-	src/${PROJECT_NAME}/numerics.cpp
 	src/${PROJECT_NAME}/target.cpp
-	# src/${PROJECT_NAME}/ergodic_exploration.cpp
 )
 
 ## Add cmake target dependencies of the library
