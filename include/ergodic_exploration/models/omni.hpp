@@ -14,6 +14,8 @@
 
 namespace ergodic_exploration
 {
+namespace models
+{
 using arma::mat;
 using arma::vec;
 
@@ -180,5 +182,6 @@ struct Omni
 
   unsigned int state_space;  // states space dimension
 };
+}  // namespace models
 }  // namespace ergodic_exploration
 #endif
