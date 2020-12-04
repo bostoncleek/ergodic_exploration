@@ -24,37 +24,6 @@ namespace ergodic_exploration
 using arma::span;
 
 /**
- * @brief Determine if control will cause a collision
- * @param collision - collision detector
- * @param grid - grid map
- * @param x0 - initial state
- * @param u - twist [vx, vy, w]
- * @param dt - time step in integration
- * @param horizon - length of integration
- * @return true if the control is collision free
- * @details The control is assumed to be constant and a twist is
- * integrated for a fixed amout of time
- */
-inline bool validate_control(const Collision& collision, const GridMap& grid,
-                             const vec& x0, const vec& u, double dt, double horizon)
-{
-  vec x = x0;
-  const vec delta = integrate_twist(x, u, dt);
-  const auto steps = static_cast<unsigned int>(std::abs(horizon / dt));
-
-  for (unsigned int i = 0; i < steps; i++)
-  {
-    x += delta;
-    if (collision.collisionCheck(grid, x))
-    {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-/**
  * @brief Time derivatve of the co-state variable
  * @param rho - co-state variable
  * @param gdx - gradient of the ergodic metric
@@ -91,6 +60,7 @@ public:
                  double horizon, double resolution, double exploration_weight,
                  unsigned int num_basis, unsigned int buffer_size,
                  unsigned int batch_size, const mat& R, const vec& umin, const vec& umax);
+
   /**
    * @brief Update the control signal
    * @param grid - grid map
@@ -99,18 +69,26 @@ public:
    */
   vec control(const GridMap& grid, const vec& x);
 
-  void controlSignal(mat& ut) const;
-
-  void optTraj(mat& opt_traj, const vec& x) const;
-
-  void addStateMemory(const vec& x);
+  /**
+   * @brief Compose optimized trajectory
+   * @param opt_traj[out] - optimized trajectory
+   */
+  void optTraj(mat& opt_traj) const;
 
   /**
    * @brief Previous optimized trajectory
    * @param path - trajectory
-   * @param frame - trajectory frame
    */
-  void path(nav_msgs::Path& path, const vec x, std::string frame) const;
+  void path(nav_msgs::Path& path) const;
+
+  /**
+   * @brief Add the robot's state to memory
+   * @param x - current state [x, y, theta]
+   */
+  void addStateMemory(const vec& x);
+
+  /** @brief return time step */
+  double timeStep() const;
 
   /**
    * @brief Set the target distribution
@@ -170,6 +148,7 @@ private:
   vec map_pos_;          // position of map
   vec umin_;             // lower limit on controls
   vec umax_;             // upper limit on controls
+  vec pose_;             // current state
   Basis basis_;          // fourier basis
   ReplayBuffer buffer_;  // store past states in frame of occupancy map
   CoStateFunc rhodot_;   // co-state function
@@ -200,6 +179,7 @@ ErgodicControl<ModelT>::ErgodicControl(const ModelT& model, const Collision& col
   , map_pos_(2, arma::fill::zeros)
   , umin_(umin)
   , umax_(umax)
+  , pose_(model.state_space, arma::fill::zeros)
   , basis_(0.0, 0.0, num_basis)  // fourier domain init to 0
   , buffer_(buffer_size, batch_size)
 {
@@ -218,6 +198,8 @@ ErgodicControl<ModelT>::ErgodicControl(const ModelT& model, const Collision& col
 template <class ModelT>
 vec ErgodicControl<ModelT>::control(const GridMap& grid, const vec& x)
 {
+  pose_ = x;
+
   // Update target grid if needed
   configTarget(grid);
 
@@ -227,7 +209,7 @@ vec ErgodicControl<ModelT>::control(const GridMap& grid, const vec& x)
 
   // Forward simulation
   RungeKutta rk4(dt_);
-  rk4.solve(traj_, model_, x, ut_, horizon_);
+  rk4.solve(traj_, model_, pose_, ut_, horizon_);
 
   // Sample past states
   mat xt_total;
@@ -307,35 +289,21 @@ vec ErgodicControl<ModelT>::control(const GridMap& grid, const vec& x)
 }
 
 template <class ModelT>
-void ErgodicControl<ModelT>::controlSignal(mat& ut) const
-{
-  ut = ut_;
-}
-
-template <class ModelT>
-void ErgodicControl<ModelT>::optTraj(mat& opt_traj, const vec& x) const
+void ErgodicControl<ModelT>::optTraj(mat& opt_traj) const
 {
   RungeKutta rk4(dt_);
   opt_traj.resize(model_.state_space, steps_);
-  rk4.solve(opt_traj, model_, x, ut_, horizon_);
+  rk4.solve(opt_traj, model_, pose_, ut_, horizon_);
 }
 
 template <class ModelT>
-void ErgodicControl<ModelT>::addStateMemory(const vec& x)
+void ErgodicControl<ModelT>::path(nav_msgs::Path& path) const
 {
-  buffer_.append(x);
-}
-
-template <class ModelT>
-void ErgodicControl<ModelT>::path(nav_msgs::Path& path, const vec x,
-                                  std::string frame) const
-{
-  path.header.frame_id = frame;
   path.poses.resize(steps_);
 
   RungeKutta rk4(dt_);
   mat opt_traj(model_.state_space, steps_);
-  rk4.solve(opt_traj, model_, x, ut_, horizon_);
+  rk4.solve(opt_traj, model_, pose_, ut_, horizon_);
 
   for (unsigned int i = 0; i < opt_traj.n_cols; i++)
   {
@@ -350,6 +318,18 @@ void ErgodicControl<ModelT>::path(nav_msgs::Path& path, const vec x,
     path.poses.at(i).pose.orientation.z = quat.z();
     path.poses.at(i).pose.orientation.w = quat.w();
   }
+}
+
+template <class ModelT>
+void ErgodicControl<ModelT>::addStateMemory(const vec& x)
+{
+  buffer_.append(x);
+}
+
+template <class ModelT>
+double ErgodicControl<ModelT>::timeStep() const
+{
+  return dt_;
 }
 
 template <class ModelT>
@@ -401,34 +381,16 @@ void ErgodicControl<ModelT>::configTarget(const GridMap& grid)
       phi_grid_(1, col) = y;
       // std::cout << x << " " << y << std::endl;
 
-      // const auto p = grid.getCell(x + grid.xmin(), y + grid.ymin());
-      // const std::vector<unsigned int> gidx =
-      //     grid.world2Grid(x + grid.xmin(), y + grid.ymin());
-      // if (grid.gridBounds(gidx.at(0), gidx.at(1)))
-      // {
-      //   // std::cout << "HERE !!!!!!!!!!!!" << std::endl;
-      //
-      //   const auto idx = grid.grid2RowMajor(gidx.at(0), gidx.at(1));
-      //   const auto p = grid.getCell(idx);
-      //   phi_vals_(col) = entropy(p);
-      // }
-
       col++;
       x += resolution_;
     }
     y += resolution_;
   }
-  // phi_grid_.t().print("phi_grid");
 
   // Evaluate each grid cell
   target_.fill(phi_vals_, map_pos_, phi_grid_);
-  // phi_vals_.print("phi_vals");
-
-  // spatial fourier coefficients
-  // phi_vals_ /= sum(phi_vals_);
 
   basis_.spatialCoeff(phik_, phi_vals_, phi_grid_);
-  // phik_.print("phik_");
 
   std::cout << "done" << std::endl;
 }
