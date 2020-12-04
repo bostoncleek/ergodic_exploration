@@ -49,8 +49,6 @@
     odom (nav_msgs/Odometry) - robot's odometry
  */
 
-#include <iostream>
-
 #include <ergodic_exploration/models/omni.hpp>
 #include <ergodic_exploration/exploration.hpp>
 

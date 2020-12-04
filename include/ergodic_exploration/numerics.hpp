@@ -8,7 +8,6 @@
 #define NUMERICS_HPP
 
 #include <cmath>
-#include <iostream>
 #include <algorithm>
 // #include <numbers>
 

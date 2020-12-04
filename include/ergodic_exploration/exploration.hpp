@@ -6,8 +6,6 @@
  * approach for collision avoidance
  */
 
-#include <iostream>
-
 #include <ros/ros.h>
 #include <ros/console.h>
 #include <geometry_msgs/Twist.h>

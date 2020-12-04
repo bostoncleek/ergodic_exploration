@@ -5,7 +5,6 @@
  * @brief Fourier cosine basis
  */
 
-#include <iostream>
 #include <cmath>
 
 #include <ergodic_exploration/basis.hpp>
@@ -104,5 +103,4 @@ void Basis::spatialCoeff(vec& phik, const vec& phi_vals, const mat& phi_grid)
   // sum accross each column
   phik = sum(fk_mat, 1);
 }
-
 }  // namespace ergodic_exploration
