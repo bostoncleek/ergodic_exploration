@@ -14,7 +14,7 @@ TEST(OmniTest, MecanumKinematics)
   const auto wheel_base_x = 0.5;
   const auto wheel_base_y = 0.5;
 
-  ergodic_exploration::Mecanum mecanum(wheel_radius, wheel_base_x, wheel_base_y);
+  ergodic_exploration::models::Mecanum mecanum(wheel_radius, wheel_base_x, wheel_base_y);
 
   const arma::vec x = { 1.0, 2.0, 0.707 };
   const arma::vec u = { 0.5, 0.4, 0.6, 0.3 };
@@ -31,7 +31,7 @@ TEST(OmniTest, MecanumJacobianState)
   const auto wheel_base_x = 0.5;
   const auto wheel_base_y = 0.5;
 
-  ergodic_exploration::Mecanum mecanum(wheel_radius, wheel_base_x, wheel_base_y);
+  ergodic_exploration::models::Mecanum mecanum(wheel_radius, wheel_base_x, wheel_base_y);
 
   const arma::vec x = { 1.0, 2.0, 0.707 };
   const arma::vec u = { 0.5, 0.4, 0.6, 0.3 };
@@ -47,7 +47,7 @@ TEST(OmniTest, MecanumJacobianControl)
   const auto wheel_base_x = 0.5;
   const auto wheel_base_y = 0.5;
 
-  ergodic_exploration::Mecanum mecanum(wheel_radius, wheel_base_x, wheel_base_y);
+  ergodic_exploration::models::Mecanum mecanum(wheel_radius, wheel_base_x, wheel_base_y);
 
   const arma::vec x = { 1.0, 2.0, 0.707 };
   const arma::vec u = { 0.5, 0.4, 0.6, 0.3 };

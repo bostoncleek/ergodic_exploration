@@ -11,7 +11,7 @@
 
 TEST(RungeKuttaTest, Simulate)
 {
-  ergodic_exploration::Cart cart(0.1, 2.0);
+  ergodic_exploration::models::Cart cart(0.1, 2.0);
 
   const auto horizon = 0.4;
   const auto dt = 0.1;

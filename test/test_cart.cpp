@@ -12,7 +12,7 @@ TEST(CartTest, CartKinematics)
 {
   const auto wheel_radius = 0.033;
   const auto wheel_base = 0.08;
-  ergodic_exploration::Cart cart(wheel_radius, wheel_base);
+  ergodic_exploration::models::Cart cart(wheel_radius, wheel_base);
 
   const arma::vec x = { 1.0, 2.0, 0.707 };
   const arma::vec u = { 0.1, 0.2 };
@@ -27,7 +27,7 @@ TEST(CartTest, CartJacobianState)
 {
   const auto wheel_radius = 0.033;
   const auto wheel_base = 0.08;
-  ergodic_exploration::Cart cart(wheel_radius, wheel_base);
+  ergodic_exploration::models::Cart cart(wheel_radius, wheel_base);
 
   const arma::vec x = { 1.0, 2.0, 0.707 };
   const arma::vec u = { 0.1, 0.2 };
@@ -41,7 +41,7 @@ TEST(CartTest, CartJacobianControl)
 {
   const auto wheel_radius = 0.033;
   const auto wheel_base = 0.08;
-  ergodic_exploration::Cart cart(wheel_radius, wheel_base);
+  ergodic_exploration::models::Cart cart(wheel_radius, wheel_base);
 
   const arma::vec x = { 1.0, 2.0, 0.707 };
   const arma::mat B = cart.fdu(x);
@@ -60,7 +60,7 @@ TEST(CartTest, CartWheels2TwistStraight)
 {
   const auto wheel_radius = 0.033;
   const auto wheel_base = 0.08;
-  ergodic_exploration::Cart cart(wheel_radius, wheel_base);
+  ergodic_exploration::models::Cart cart(wheel_radius, wheel_base);
 
   const arma::vec u = { 1.0, 1.0 };
   arma::vec vb = cart.wheels2Twist(u);
@@ -74,7 +74,7 @@ TEST(CartTest, CartWheels2LeftTurn)
 {
   const auto wheel_radius = 0.033;
   const auto wheel_base = 0.08;
-  ergodic_exploration::Cart cart(wheel_radius, wheel_base);
+  ergodic_exploration::models::Cart cart(wheel_radius, wheel_base);
 
   const arma::vec u = { -1.0, 1.0 };
   arma::vec vb = cart.wheels2Twist(u);
@@ -88,7 +88,7 @@ TEST(CartTest, CartWheels2RightTurn)
 {
   const auto wheel_radius = 0.033;
   const auto wheel_base = 0.08;
-  ergodic_exploration::Cart cart(wheel_radius, wheel_base);
+  ergodic_exploration::models::Cart cart(wheel_radius, wheel_base);
 
   const arma::vec u = { 1.0, -1.0 };
   arma::vec vb = cart.wheels2Twist(u);
@@ -100,7 +100,7 @@ TEST(CartTest, CartWheels2RightTurn)
 
 TEST(CartTest, SimpleCartKinematics)
 {
-  ergodic_exploration::SimpleCart cart;
+  ergodic_exploration::models::SimpleCart cart;
 
   const arma::vec x = { 1.0, 2.0, 0.707 };
   const arma::vec u = { 0.5, 0.0, 0.01 };
@@ -113,7 +113,7 @@ TEST(CartTest, SimpleCartKinematics)
 
 TEST(CartTest, SimpleCartJacobianState)
 {
-  ergodic_exploration::SimpleCart cart;
+  ergodic_exploration::models::SimpleCart cart;
 
   const arma::vec x = { 1.0, 2.0, 0.707 };
   const arma::vec u = { 0.5, 0.0, 0.01 };
@@ -125,7 +125,7 @@ TEST(CartTest, SimpleCartJacobianState)
 
 TEST(CartTest, SimpleCartJacobianControl)
 {
-  ergodic_exploration::SimpleCart cart;
+  ergodic_exploration::models::SimpleCart cart;
 
   const arma::vec x = { 1.0, 2.0, 0.707 };
   const arma::vec u = { 0.5, 0.01 };
