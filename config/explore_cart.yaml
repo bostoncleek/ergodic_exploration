@@ -7,7 +7,7 @@
 # max_rot_vel: max ratotional velcocity (m/s)
 # min_vel_x: min x velcocity (m/s)
 # min_vel_y: min y velcocity (m/s)
-# min_rot_vel: max ratotional velcocity (m/s)
+# min_rot_vel: min ratotional velcocity (m/s)
 # acc_lim_x: x acceleration limit (m/s^2)
 # acc_lim_y: y acceleration limit (m/s^2)
 # acc_lim_th: : rotational acceleration limit (m/s^2)
