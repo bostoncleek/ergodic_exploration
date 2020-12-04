@@ -10,9 +10,6 @@
 #include <cmath>
 #include <limits>
 
-#include <nav_msgs/Path.h>
-#include <tf2/LinearMath/Quaternion.h>
-
 #include <ergodic_exploration/grid.hpp>
 #include <ergodic_exploration/collision.hpp>
 
@@ -50,44 +47,87 @@ public:
                 double min_rot_vel, unsigned int vx_samples, unsigned int vy_samples,
                 unsigned int vth_samples);
 
-  // TODO: return bool indicating failure so recovery behviors can be used
   /**
    * @brief Compose best control
+   * @param u_opt[out] - optimal twist [vx, vy, w]
    * @param grid - grid map
    * @param x0 - current state [x, y, theta]
    * @param vb - current twist [vx, vy, w]
    * @param vref - desired twist to follow [vx, vy, w]
-   * @return optimal twist [vx, vy, w]
+   * @return true if at least one solution is found
    * @details u_opt is set to zeros if no solution found
    */
-  vec control(const GridMap& grid, const vec& x0, const vec& vb, const vec& vref) const;
-
-  vec control(const GridMap& grid, const vec& x0, const vec& vb, const mat& xt_ref,
-              double delta) const;
+  bool control(vec& u_opt, const GridMap& grid, const vec& x0, const vec& vb,
+               const vec& vref) const;
 
   /**
-   * @brief Objective function to minimize
+   * @brief Compose best control
+   * @param u_opt[out] - optimal twist [vx, vy, w]
+   * @param grid - grid map
+   * @param x0 - current state [x, y, theta]
+   * @param vb - current twist [vx, vy, w]
+   * @param xt_ref - reference trajectory
+   * @param dt_ref - reference trajectory time discretization
+   * @return true if at least one solution is found
+   * @details u_opt is set to zeros if no solution found
+   */
+  bool control(vec& u_opt, const GridMap& grid, const vec& x0, const vec& vb,
+               const mat& xt_ref, double dt_ref) const;
+
+  /** @brief return time step */
+  double timeStep() const
+  {
+    return dt_;
+  }
+
+  /** @brief return control horizon */
+  double horizon() const
+  {
+    return horizon_;
+  }
+
+  /** @brief return number of steps in horizon */
+  unsigned int steps() const
+  {
+    return steps_;
+  }
+
+private:
+  /**
+   * @brief Compose window size and discretization
+   * @param vel_lower[out] - twist lower limits
+   * @param delta_vb[out] - twist discretization
+   * @param vb - current twist [vx, vy, w]
+   */
+  void window(vec& vel_lower, vec& delta_vb, const vec& vb) const;
+
+  /**
+   * @brief Objective function
    * @param cost[out] - cost of objective function
    * @param grid - grid map
    * @param x0 - current state [x, y, theta]
    * @param vref - desired twist to follow [vx, vy, w]
    * @param u - twist from dynamic window
    * @return true if the twist is collision free
+   * @details - finds best twist to reference twist that is collision free
    */
   bool objective(double& cost, const GridMap& grid, const vec& x0, const vec& vref,
                  const vec& u) const;
 
+  /**
+   * @brief Objective function
+   * @param cost[out] - cost of objective function
+   * @param grid - grid map
+   * @param x0 - current state [x, y, theta]
+   * @param u - twist from dynamic window
+   * @param xt_ref - reference trajectory
+   * @param tf - reference trajectory length in time
+   * @return true if the twist is collision free
+   * @details - finds best twist that generates a path closest to the reference
+   * trajectory that is collision free
+   */
   bool objective(double& cost, const GridMap& grid, const vec& x0, const vec& u,
                  const mat& xt_ref, double tf) const;
-
-  /**
-   * @brief Visulaize path from following twist
-   * @param path - trajectory
-   * @param x - current state
-   * @param u - twist [vx, vy, w]
-   * @param frame - trajectory frame
-   */
-  void path(nav_msgs::Path& path, const vec& x, const vec& u, std::string frame) const;
 
 private:
   Collision collision_;                        // collision detection

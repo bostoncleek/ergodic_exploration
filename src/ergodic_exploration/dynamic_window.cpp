@@ -58,73 +58,33 @@ DynamicWindow::DynamicWindow(const Collision& collision, double dt, double horiz
   }
 }
 
-vec DynamicWindow::control(const GridMap& grid, const vec& x0, const vec& vb,
-                           const vec& vref) const
+bool DynamicWindow::control(vec& u_opt, const GridMap& grid, const vec& x0, const vec& vb,
+                            const vec& vref) const
 {
-  const auto vdx_low = std::max(vb(0) - acc_lim_x_ * acc_dt_, min_vel_x_);
-  const auto vdx_high = std::min(vb(0) + acc_lim_x_ * acc_dt_, max_vel_x_);
+  // Window bounds and discretization
+  vec vel_lower(3, arma::fill::zeros);  // twist lower limits
+  vec delta_vb(3, arma::fill::zeros);   // twist discretization
 
-  const auto vdy_low = std::max(vb(1) - acc_lim_y_ * acc_dt_, min_vel_y_);
-  const auto vdy_high = std::min(vb(1) + acc_lim_y_ * acc_dt_, max_vel_y_);
-
-  const auto wd_low = std::max(vb(2) - acc_lim_th_ * acc_dt_, min_rot_vel_);
-  const auto wd_high = std::min(vb(2) + acc_lim_th_ * acc_dt_, max_rot_vel_);
-
-  // std::cout << "Window " << std::endl;
-  // std::cout << "vx: [ " << vdx_low << ", " << vdx_high << " ]" << std::endl;
-  // std::cout << "vy: [ " << vdy_low << ", " << vdy_high << " ]" << std::endl;
-  // std::cout << "w: [ " << wd_low << ", " << wd_high << " ]" << std::endl;
-
-  auto dvx = 0.0;
-  auto dvy = 0.0;
-  auto dw = 0.0;
-
-  if (vx_samples_ > 1)
-  {
-    dvx = (vdx_high - vdx_low) / static_cast<double>(vx_samples_ - 1);
-  }
-
-  if (vy_samples_ > 1)
-  {
-    dvy = (vdy_high - vdy_low) / static_cast<double>(vy_samples_ - 1);
-  }
-
-  if (vth_samples_ > 1)
-  {
-    dw = (wd_high - wd_low) / static_cast<double>(vth_samples_ - 1);
-  }
-
-  // TODO: make sure no division by 0
-  // const auto dvx = (vdx_high - vdx_low) / static_cast<double>(vx_samples_ - 1);
-  // const auto dvy = (vdy_high - vdy_low) / static_cast<double>(vy_samples_ - 1);
-  // const auto dw = (wd_high - wd_low) / static_cast<double>(vth_samples_ - 1);
-
-  // std::cout << "Window discretization " << std::endl;
-  // std::cout << "dvx: " << dvx << std::endl;
-  // std::cout << "dvy: " << dvy << std::endl;
-  // std::cout << "dw: " << dw << std::endl;
+  window(vel_lower, delta_vb, vb);
 
   // Search velocity space
   auto min_cost = std::numeric_limits<double>::max();
 
   bool soln_found = false;
 
-  vec u_opt(3, arma::fill::zeros);
   vec u(3);
-  auto vx = vdx_low;
+  auto vx = vel_lower(0);
   for (unsigned int i = 0; i < vx_samples_; i++)
   {
-    auto vy = vdy_low;
+    auto vy = vel_lower(1);
     for (unsigned int j = 0; j < vy_samples_; j++)
     {
-      auto w = wd_low;
+      auto w = vel_lower(2);
       for (unsigned int k = 0; k < vth_samples_; k++)
       {
         u(0) = vx;
         u(1) = vy;
         u(2) = w;
-
-        // u.print("u tests");
 
         auto cost = 0.0;
         if (!objective(cost, grid, x0, vref, u))
@@ -138,118 +98,53 @@ vec DynamicWindow::control(const GridMap& grid, const vec& x0, const vec& vb,
           }
         }
 
-        w += dw;
+        w += delta_vb(2);
       }  // end w loop
-      vy += dvy;
+      vy += delta_vb(1);
     }  // end vy loop
-    vx += dvx;
+    vx += delta_vb(0);
   }  // end vx loop
 
   // simple recovery behavior rotate in place
   if (!soln_found)
   {
     std::cout << "DWA Failed! Not even 1 solution found" << std::endl;
+    u_opt.zeros();
   }
 
-  // std::cout << "min cost " << min_cost << std::endl;
-
-  return u_opt;
+  return soln_found;
 }
 
-vec DynamicWindow::control(const GridMap& grid, const vec& x0, const vec& vb,
-                           const mat& xt_ref, double delta) const
+bool DynamicWindow::control(vec& u_opt, const GridMap& grid, const vec& x0, const vec& vb,
+                            const mat& xt_ref, double dt_ref) const
 {
-  const auto vdx_low = std::max(vb(0) - acc_lim_x_ * acc_dt_, min_vel_x_);
-  const auto vdx_high = std::min(vb(0) + acc_lim_x_ * acc_dt_, max_vel_x_);
+  // Window bounds and discretization
+  vec vel_lower(3, arma::fill::zeros);  // twist lower limits
+  vec delta_vb(3, arma::fill::zeros);   // twist discretization
 
-  const auto vdy_low = std::max(vb(1) - acc_lim_y_ * acc_dt_, min_vel_y_);
-  const auto vdy_high = std::min(vb(1) + acc_lim_y_ * acc_dt_, max_vel_y_);
-
-  const auto wd_low = std::max(vb(2) - acc_lim_th_ * acc_dt_, min_rot_vel_);
-  const auto wd_high = std::min(vb(2) + acc_lim_th_ * acc_dt_, max_rot_vel_);
-
-  // std::cout << "Window " << std::endl;
-  // std::cout << "vx: [ " << vdx_low << ", " << vdx_high << " ]" << std::endl;
-  // std::cout << "vy: [ " << vdy_low << ", " << vdy_high << " ]" << std::endl;
-  // std::cout << "w: [ " << wd_low << ", " << wd_high << " ]" << std::endl;
-
-  auto dvx = 0.0;
-  auto dvy = 0.0;
-  auto dw = 0.0;
-
-  if (vx_samples_ > 1)
-  {
-    dvx = (vdx_high - vdx_low) / static_cast<double>(vx_samples_ - 1);
-  }
-
-  if (vy_samples_ > 1)
-  {
-    dvy = (vdy_high - vdy_low) / static_cast<double>(vy_samples_ - 1);
-  }
-
-  if (vth_samples_ > 1)
-  {
-    dw = (wd_high - wd_low) / static_cast<double>(vth_samples_ - 1);
-  }
-
-  // TODO: make sure no division by 0
-  // const auto dvx = (vdx_high - vdx_low) / static_cast<double>(vx_samples_ - 1);
-  // const auto dvy = (vdy_high - vdy_low) / static_cast<double>(vy_samples_ - 1);
-  // const auto dw = (wd_high - wd_low) / static_cast<double>(vth_samples_ - 1);
-
-  // std::cout << "Window discretization " << std::endl;
-  // std::cout << "dvx: " << dvx << std::endl;
-  // std::cout << "dvy: " << dvy << std::endl;
-  // std::cout << "dw: " << dw << std::endl;
+  window(vel_lower, delta_vb, vb);
 
   // Time parameterization of the reference trajectory
-  const double tf = static_cast<double>(xt_ref.n_cols) * delta;
-
-  // if (horizon_ > tf)
-  // {
-  //   std::cout << "WARNING: Ergodic control horizon is less \
-  //                 than the dynamic window horizon causing the search \
-  //                 to extrapolate which will lead to uncertainty."
-  //             << std::endl;
-  // }
-
-  // const vec tvec_ref = arma::linspace(0.0, tf, xt_ref.n_cols);
-  //
-  // // Time parameterization of the dwa trajectory
-  // const vec tvec_dwa = arma::linspace(0.0, horizon_, steps_);
-  //
-  // // Fit quartic polynomials to the reference trajectory
-  // const vec poly_x = polyfit(tvec_ref, xt_ref.row(0), 4);
-  // const vec poly_y = polyfit(tvec_ref, xt_ref.row(1), 4);
-  // const vec poly_th = polyfit(tvec_ref, xt_ref.row(2), 4);
-  //
-  // // Interpolate
-  // mat xt_param(3, steps_);
-  // xt_param.row(0) = polyval(poly_x, tvec_dwa).t();
-  // xt_param.row(1) = polyval(poly_y, tvec_dwa).t();
-  // xt_param.row(2) = polyval(poly_th, tvec_dwa).t();
+  const double tf = static_cast<double>(xt_ref.n_cols) * dt_ref;
 
   // Search velocity space
   auto min_cost = std::numeric_limits<double>::max();
 
   bool soln_found = false;
 
-  vec u_opt(3, arma::fill::zeros);
   vec u(3);
-  auto vx = vdx_low;
+  auto vx = vel_lower(0);
   for (unsigned int i = 0; i < vx_samples_; i++)
   {
-    auto vy = vdy_low;
+    auto vy = vel_lower(1);
     for (unsigned int j = 0; j < vy_samples_; j++)
     {
-      auto w = wd_low;
+      auto w = vel_lower(2);
       for (unsigned int k = 0; k < vth_samples_; k++)
       {
         u(0) = vx;
         u(1) = vy;
         u(2) = w;
-
-        // u.print("u tests");
 
         auto cost = 0.0;
         if (!objective(cost, grid, x0, u, xt_ref, tf))
@@ -263,22 +158,60 @@ vec DynamicWindow::control(const GridMap& grid, const vec& x0, const vec& vb,
           }
         }
 
-        w += dw;
+        w += delta_vb(2);
       }  // end w loop
-      vy += dvy;
+      vy += delta_vb(1);
     }  // end vy loop
-    vx += dvx;
+    vx += delta_vb(0);
   }  // end vx loop
 
   // simple recovery behavior rotate in place
   if (!soln_found)
   {
     std::cout << "DWA Failed! Not even 1 solution found" << std::endl;
+    u_opt.zeros();
   }
 
-  // std::cout << "min cost " << min_cost << std::endl;
+  return soln_found;
+}
 
-  return u_opt;
+void DynamicWindow::window(vec& vel_lower, vec& delta_vb, const vec& vb) const
+{
+  vec vel_upper(3, arma::fill::zeros);  // twist upper limits
+
+  vel_lower(0) = std::max(vb(0) - acc_lim_x_ * acc_dt_, min_vel_x_);
+  vel_upper(0) = std::min(vb(0) + acc_lim_x_ * acc_dt_, max_vel_x_);
+
+  vel_lower(1) = std::max(vb(1) - acc_lim_y_ * acc_dt_, min_vel_y_);
+  vel_upper(1) = std::min(vb(1) + acc_lim_y_ * acc_dt_, max_vel_y_);
+
+  vel_lower(2) = std::max(vb(2) - acc_lim_th_ * acc_dt_, min_rot_vel_);
+  vel_upper(2) = std::min(vb(2) + acc_lim_th_ * acc_dt_, max_rot_vel_);
+
+  // std::cout << "Window " << std::endl;
+  // std::cout << "vx: [ " << vel_lower(0) << ", " << vel_upper(0) << " ] \n" ;
+  // std::cout << "vy: [ " << vel_lower(1) << ", " << vel_upper(1) << " ] \n";
+  // std::cout << "w: [ " << vel_lower(2) << ", " << vel_upper(2) << " ]" << std::endl;
+
+  if (vx_samples_ > 1)
+  {
+    delta_vb(0) = (vel_upper(0) - vel_lower(0)) / static_cast<double>(vx_samples_ - 1);
+  }
+
+  if (vy_samples_ > 1)
+  {
+    delta_vb(1) = (vel_upper(1) - vel_lower(1)) / static_cast<double>(vy_samples_ - 1);
+  }
+
+  if (vth_samples_ > 1)
+  {
+    delta_vb(2) = (vel_upper(2) - vel_lower(2)) / static_cast<double>(vth_samples_ - 1);
+  }
+
+  // std::cout << "Window discretization " << std::endl;
+  // std::cout << "dvx: " << delta_vb(0) << std::endl;
+  // std::cout << "dvy: " << delta_vb(1) << std::endl;
+  // std::cout << "dw: " << delta_vb(2) << std::endl;
 }
 
 bool DynamicWindow::objective(double& cost, const GridMap& grid, const vec& x0,
@@ -297,22 +230,11 @@ bool DynamicWindow::objective(double& cost, const GridMap& grid, const vec& x0,
     {
       return true;
     }
-
-    // cost += (1.0 / dmin);
   }
 
   // control error;
   const vec cntrl_error = vref - u;
   cost += dot(cntrl_error, cntrl_error);
-
-  // const auto v_trans =
-  //     std::sqrt(max_vel_x_ * max_vel_x_ + max_vel_y_ * max_vel_y_);
-  // const auto v_sample = std::sqrt(u(0) * u(0) + u(1) * u(1));
-  //
-  // loss += v_trans - v_sample;
-
-  // loss += std::abs(u(2) - max_rot_vel_);
-  // loss += std::abs(u(2) - max_rot_vel);
 
   return false;
 }
@@ -336,21 +258,11 @@ bool DynamicWindow::objective(double& cost, const GridMap& grid, const vec& x0,
       return true;
     }
 
-    // index into
+    // index into reference trajectory
     const auto j = static_cast<unsigned int>(std::round((xt_ref.n_cols - 1) * t / tf));
-
-    // std::cout << "t: " << t << " j: " << j << std::endl;
-
-
-    // if (j > xt_ref.n_cols - 1)
-    // {
-    //   std::cout << "ERROR" << std::endl;
-    // }
 
     cost += arma::norm(xt_ref(span(0, 1), span(j, j)) - pose.rows(0, 1));
     cost += std::abs(normalize_angle_PI(normalize_angle_PI(xt_ref(2, j)) - pose(2)));
-
-    // cost += (1.0 / dmin);
 
     t += dt_;
   }
@@ -358,29 +270,4 @@ bool DynamicWindow::objective(double& cost, const GridMap& grid, const vec& x0,
   return false;
 }
 
-void DynamicWindow::path(nav_msgs::Path& path, const vec& x, const vec& u,
-                         std::string frame) const
-{
-  path.header.frame_id = frame;
-  path.poses.resize(steps_);
-
-  vec pose = x;
-  const vec delta = integrate_twist(x, u, dt_);
-
-  for (unsigned int i = 0; i < steps_; i++)
-  {
-    pose += delta;
-
-    path.poses.at(i).pose.position.x = pose(0);
-    path.poses.at(i).pose.position.y = pose(1);
-
-    tf2::Quaternion quat;
-    quat.setRPY(0.0, 0.0, normalize_angle_PI(pose(2)));
-
-    path.poses.at(i).pose.orientation.x = quat.x();
-    path.poses.at(i).pose.orientation.y = quat.y();
-    path.poses.at(i).pose.orientation.z = quat.z();
-    path.poses.at(i).pose.orientation.w = quat.w();
-  }
-}
 }  // namespace ergodic_exploration
