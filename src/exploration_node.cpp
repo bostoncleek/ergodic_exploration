@@ -250,7 +250,8 @@ int main(int argc, char** argv)
     // ergodic_control.addStateMemory(pose);
 
     // TODO: Check if map has grown and if so update mi
-    if (distance_traveled > 5.0)
+    // TODO: add this as a parameter
+    if (distance_traveled > 2.0)
     {
       ROS_INFO_NAMED(LOGNAME, "Robot traveled: %f", distance_traveled);
       update_mi = true;
