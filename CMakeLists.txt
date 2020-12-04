@@ -84,6 +84,7 @@ include
 # Declare a C++ library
 add_library(${PROJECT_NAME}
 	include/${PROJECT_NAME}/ergodic_control.hpp
+	include/${PROJECT_NAME}/exploration.hpp
 	include/${PROJECT_NAME}/integrator.hpp
 	include/${PROJECT_NAME}/models/cart.hpp
 	include/${PROJECT_NAME}/models/omni.hpp
@@ -95,28 +96,18 @@ add_library(${PROJECT_NAME}
 	src/${PROJECT_NAME}/grid.cpp
 	src/${PROJECT_NAME}/mapping.cpp
 	src/${PROJECT_NAME}/target.cpp
-	# src/${PROJECT_NAME}/ergodic_exploration.cpp
 )
 
 ## Add cmake target dependencies of the library
-# add_dependencies(${PROJECT_NAME}
-# 	${${PROJECT_NAME}_EXPORTED_TARGETS}
-# 	${catkin_EXPORTED_TARGETS}
-# )
-
+add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 # Declare a C++ executable
-add_executable(exploration src/exploration_node.cpp)
-add_executable(test_node src/test_node.cpp)
-
-## Rename C++ executable without prefix
-## The above recommended prefix causes long target names, the following renames the
-## target back to the shorter version for ease of user use
-## e.g. "rosrun someones_pkg node" instead of "rosrun someones_pkg someones_pkg_node"
-# set_target_properties(${PROJECT_NAME}_node PROPERTIES OUTPUT_NAME node PREFIX "")
+add_executable(exploration_cart src/exploration_cart_node.cpp)
+add_executable(exploration_omni src/exploration_omni_node.cpp)
 
 ## Add cmake target dependencies of the executable
-# add_dependencies(exploration ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(exploration_cart ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(exploration_omni ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 # Specify libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME}
@@ -124,13 +115,13 @@ target_link_libraries(${PROJECT_NAME}
 	${ARMADILLO_LIBRARIES}
 )
 
-target_link_libraries(exploration
+target_link_libraries(exploration_cart
   ${catkin_LIBRARIES}
 	${PROJECT_NAME}
 	${ARMADILLO_LIBRARIES}
 )
 
-target_link_libraries(test_node
+target_link_libraries(exploration_omni
   ${catkin_LIBRARIES}
 	${PROJECT_NAME}
 	${ARMADILLO_LIBRARIES}
@@ -140,15 +131,8 @@ target_link_libraries(test_node
 ## Install ##
 #############
 
-## Mark executable scripts (Python etc.) for installation
-## in contrast to setup.py, you can choose the destination
-# catkin_install_python(PROGRAMS
-#   scripts/grid_saver
-#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
-
 # Mark executables for installation
-install(TARGETS exploration test_node
+install(TARGETS exploration_cart exploration_omni
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
