@@ -14,6 +14,11 @@
 
 #include <armadillo>
 
+#include <nav_msgs/Path.h>
+#include <tf2/LinearMath/Quaternion.h>
+
+#include <ergodic_exploration/collision.hpp>
+
 namespace ergodic_exploration
 {
 using arma::mat;
@@ -32,6 +37,44 @@ constexpr double PI = 3.14159265358979323846;
 inline bool almost_equal(double d1, double d2, double epsilon = 1.0e-12)
 {
   return std::fabs(d1 - d2) < epsilon ? true : false;
+}
+
+/**
+ * @brief Wraps angle between -pi and pi
+ * @param rad - angle in radians
+ * @return wrapped angle in radians
+ */
+inline double normalize_angle_PI(double rad)
+{
+  // floating point remainder essentially this is fmod
+  const auto q = std::floor((rad + PI) / (2.0 * PI));
+  rad = (rad + PI) - q * 2.0 * PI;
+
+  if (rad < 0.0)
+  {
+    rad += 2.0 * PI;
+  }
+
+  return (rad - PI);
+}
+
+/**
+ * @brief Wraps angle between 0 and 2pi or 0 to -2pi
+ * @param rad - angle in radians
+ * @return wrapped angle in radians
+ */
+inline double normalize_angle_2PI(double rad)
+{
+  // floating point remainder essentially this is fmod
+  const auto q = std::floor(rad / (2.0 * PI));
+  rad = (rad)-q * 2.0 * PI;
+
+  if (rad < 0.0)
+  {
+    rad += 2.0 * PI;
+  }
+
+  return rad;
 }
 
 /**
@@ -191,41 +234,68 @@ inline vec integrate_twist(const vec& x, const vec& u, double dt)
 }
 
 /**
- * @brief Wraps angle between -pi and pi
- * @param rad - angle in radians
- * @return wrapped angle in radians
+ * @brief Determine if control will cause a collision
+ * @param collision - collision detector
+ * @param grid - grid map
+ * @param x0 - initial state
+ * @param u - twist [vx, vy, w]
+ * @param dt - time step in integration
+ * @param horizon - length of integration
+ * @return true if the control is collision free
+ * @details The control is assumed to be constant and a twist is
+ * integrated for a fixed amout of time
  */
-inline double normalize_angle_PI(double rad)
+inline bool validate_control(const Collision& collision, const GridMap& grid,
+                             const vec& x0, const vec& u, double dt, double horizon)
 {
-  // floating point remainder essentially this is fmod
-  const auto q = std::floor((rad + PI) / (2.0 * PI));
-  rad = (rad + PI) - q * 2.0 * PI;
+  vec x = x0;
+  const vec delta = integrate_twist(x, u, dt);
+  const auto steps = static_cast<unsigned int>(std::abs(horizon / dt));
 
-  if (rad < 0.0)
+  for (unsigned int i = 0; i < steps; i++)
   {
-    rad += 2.0 * PI;
+    x += delta;
+    if (collision.collisionCheck(grid, x))
+    {
+      return false;
+    }
   }
 
-  return (rad - PI);
+  return true;
 }
 
 /**
- * @brief Wraps angle between 0 and 2pi or 0 to -2pi
- * @param rad - angle in radians
- * @return wrapped angle in radians
+ * @brief Visualize path from following a constant twist
+ * @param path - trajectory
+ * @param x0 - current state
+ * @param u - twist [vx, vy, w]
+ * @param dt - time step
+ * @param horizon - control horizon
  */
-inline double normalize_angle_2PI(double rad)
+inline void constTwistPath(nav_msgs::Path& path, const vec& x0, const vec& u, double dt,
+                           double horizon)
 {
-  // floating point remainder essentially this is fmod
-  const auto q = std::floor(rad / (2.0 * PI));
-  rad = (rad)-q * 2.0 * PI;
+  const auto steps = static_cast<unsigned int>(std::abs(horizon / dt));
+  path.poses.resize(steps);
 
-  if (rad < 0.0)
+  vec x = x0;
+  const vec delta = integrate_twist(x, u, dt);
+
+  for (unsigned int i = 0; i < steps; i++)
   {
-    rad += 2.0 * PI;
-  }
+    x += delta;
 
-  return rad;
+    path.poses.at(i).pose.position.x = x(0);
+    path.poses.at(i).pose.position.y = x(1);
+
+    tf2::Quaternion quat;
+    quat.setRPY(0.0, 0.0, normalize_angle_PI(x(2)));
+
+    path.poses.at(i).pose.orientation.x = quat.x();
+    path.poses.at(i).pose.orientation.y = quat.y();
+    path.poses.at(i).pose.orientation.z = quat.z();
+    path.poses.at(i).pose.orientation.w = quat.w();
+  }
 }
 
 }  // namespace ergodic_exploration
