@@ -15,7 +15,8 @@
   - [Published Topics](#Published-Topics) </br>
   - [Parameters](#Parameters) </br>
   - [Required tf Transforms](#Required-tf-Transforms) </br>
-- [Issues](#Credits) </br>
+- [Future Improvements](#Future-Improvements) </br>
+- [Citing Ergodic Exploration](#Citing-Ergodic-Exploration) </br>
 - [Credits](#Credits) </br>
 
 # Motivation
@@ -58,10 +59,20 @@ roslaunch ergodic_exploration exploration.launch
 
 # Exploration
 ## Ergodic Control
+Ergodicity is defined as the fraction of time spent sampling an area should be equal to a metric quantifying the density information in that area. The ergodic metric is the difference between the probability density func­tions representing the spatial distribution and the statistical
+representation of the time-averaged trajectory [1]. The objective function includes the ergodic metric and the control cost.
+
+The ergodic controller performs receding horizon trajectory optimization in real time. The real time performance is achieved by integrating the [co-state](https://en.wikipedia.org/wiki/Hamiltonian_(control_theory)#:~:text=%2C%20referred%20to%20as%20costate%20variables,maximize%20the%20Hamiltonian%2C%20for%20all) backwards in time [2].
 
 ## Exploration Stack
+The ergodic controller cannot guarantee a collision free trajectory. The dynamic window approach is used as the local planner. The next twist from ergodic controller is propagated forward in for a short time to detect collisions. If there is a collision the dynamic window approach is used. The dynamic window approach forward propagates a constant twist for a short time and disregards it if there is a collisions.
+
+In the case where the ergodic control results in a collision the dynamic window approach uses the optimized trajectory as a reference. The dynamic window approach finds a twist that will produce a trajectory most similar to the reference that is collision free. Similarity between the optimized trajectory and the dynamic window approach trajectory is defined as the distance between the robots x and y position and the absolute difference in heading at each time step. The twist produced by the dynamic window approach is followed for a number of steps to ensure the robot is clear from any obstacles.
+
+It is possible that the twist from the dynamic window approach can cause a collision in a dynamic environment. In this case the dynamic window approach will search the velocity space for the most similar collision free twist to the previous twist given by the dynamic window approach. Similarity is defined here as the inner product of the twist. If the dynamic window approach fails in this case a flag is set for the ergodic controller to replan. The ergodic controller is sensitive to the pose of the robot and is capable of optimizing a different trajectory. This strategy prevents the robot from getting stuck.
 
 ## Collision Detection
+To detect obstacle cells in the occupancy grid [Bresenham's circle](http://members.chello.at/~easyfilter/bresenham.html) algorithm is used. The robot's base is modeled at a circle. If there are obstacles within a threshold of the robot's bounding radius the robot is considered to be in a collision state.
 
 
 # Results
@@ -73,7 +84,7 @@ is the motion model. Both use an occupancy grid for collision detection and prov
 
 ## Subscribed Topics
 - map ([nav_msgs/OccupancyGrid](http://docs.ros.org/en/noetic/api/nav_msgs/html/msg/OccupancyGrid.html)): required for collision detection
-- odom ([nav_msgs/Odometry](http://docs.ros.org/en/noetic/api/nav_msgs/html/msg/Odometry.html)): required for control feedback
+- odom ([nav_msgs/Odometry](http://docs.ros.org/en/noetic/api/nav_msgs/html/msg/Odometry.html)): required for control feedback in the dynamic window approach
 
 ## Published Topics
 - cmd_vel ([geometry_msgs/Twist](http://docs.ros.org/en/noetic/api/geometry_msgs/html/msg/Twist.html)): body twist control update
@@ -128,11 +139,32 @@ max_vel_y, min_vel_y, acc_lim_y, and vy_samples. You only need to proved the con
 - means (double array[], default: none): target x and y means (m)
 - sigmas (double array[], default: none): target x and y standard deviations (m)
 
-
 ## Required tf Transforms
 - map -> base_link : usually provided in combination by odometry and SLAM systems
 
-# Issues
+# Future Improvements
+- Recovery behaviors for when the dynamic window approach fails or for when the robot crashes.
+- Model robot's base as a polygon for collision detection.
+- Use a distance field or something else other than Bresenham's circle algorithm for detecting obstacle cells. Bresenham's algorithm is fast but can alias. It is also redundant to preform Bresenham's when searching the velocity space in the dynamic window approach. The twists are propagated forward for a short time therefore the redundancy stems from ray tracing circles multiple times within the same vicinity.
+- Implement the [fast shannon mutual information algorithm](https://arxiv.org/pdf/1905.02238.pdf). Provide a node capable of using this with any motion model.
 
+# Citing Ergodic Exploration
+## TODO: update version to 1.0.0 and add release tag
+
+```
+@software{ergodicexploration2020github,
+  author = {Boston Cleek},
+  title = {ErgodicExploration: Robot agnostic information theoretic exploration},
+  url = {https://github.com/bostoncleek/ergodic_exploration},
+  version = {0.0.1},
+  year = {2020},
+}
+```
 
 # Credits
+[1] L. M. Miller and T. D. Murphey, “Trajectory optimization for continuous
+ergodic exploration,” in American Control Conference, 2013, pp. 4196–4201. [PDF](https://murpheylab.github.io/pdfs/2013ACCMiMu.pdf)
+
+[2] Decentralized ergodic control: Distribution-driven sensing and exploration for multi-agent systems
+I. Abraham and T. D. Murphey
+IEEE Robotics and Automation Letters, vol. 3, no. 4, pp. 2987–2994, 2018. [PDF](https://murpheylab.github.io/pdfs/2018RALAbMu.pdf), [Video](https://murpheylab.github.io/videos/2018RALAbMu.mp4)
