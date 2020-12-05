@@ -5,6 +5,8 @@
  * @brief Ergodic exploration using an omni driectional robot
 
  PARAMETERS:
+    map_frame_id - map frame id
+    base_frame_id - base link frame id
     frequency - control loop frequency (Hz)
     val_dt - control validation time step for collision detection (s)
     val_horizon - control validation horizon for collision detection (s)
@@ -40,7 +42,7 @@
 
  PUBLISHES:
     cmd_vel (geometry_msgs/Twist) - body twist
-    trajectory (nav_msgs/Path) - ergodic controller optimzed trajectory
+    trajectory (nav_msgs/Path) - ergodic controller optimized trajectory
     dwa_trajectory (nav_msgs/Path) - dynamic window trajectory
     target (visualization_msgs/MarkerArray) - target distribution
 
