@@ -7,9 +7,6 @@
 
     <node pkg="map_server" name="map_server" type="map_server"
           args="$(arg map)"/>
-
-    <node pkg="tf2_ros" type="static_transform_publisher"
-      name="map_to_odom" args="0 0 0 0 0 0 1 map odom"/>
   </group>
 
   <node if="$(arg holonomic)" pkg="ergodic_exploration" type="exploration_omni" name="exploration_omni" output="screen">
