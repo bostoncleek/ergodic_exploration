@@ -1,4 +1,0 @@
-<launch>
-  <node pkg="ergodic_exploration" type="test_node" name="test_node" output="screen"/>
-  <node name="rviz" pkg="rviz" type="rviz" required="true" args="-d $(find ergodic_exploration)/config/test_explore.rviz"/>
-</launch>
