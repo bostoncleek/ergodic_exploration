@@ -105,13 +105,13 @@ max_vel_y, min_vel_y, acc_lim_y, and vy_samples. You only need to proved the con
 - val_horizon (double, default: 0.5): control validation horizon for collision detection (s)
 - max_vel_x (double, default: 1.0): max x velcocity (m/s)
 - max_vel_y (double, default: 1.0):  max y velcocity (m/s)
-- max_rot_vel (double, default: 1.0): max ratotional velcocity (m/s)
+- max_rot_vel (double, default: 1.0): max ratotional velcocity (rad/s)
 - min_vel_x (double, default: -1.0): min x velcocity (m/s)
 - min_vel_y (double, default: -1.0): min y velcocity (m/s)
-- min_rot_vel (double, default: -1.0): min ratotional velcocity (m/s)
+- min_rot_vel (double, default: -1.0): min ratotional velcocity (rad/s)
 - acc_lim_x (double, default: 1.0): x acceleration limit (m/s^2)
 - acc_lim_y (double, default: 1.0): y acceleration limit (m/s^2)
-- acc_lim_th (double, default: 1.0): rotational acceleration limit (m/s^2)
+- acc_lim_th (double, default: 1.0): rotational acceleration limit (rad/s^2)
 
 ### Collision Parameters
 - boundary_radius (double, default: 0.7): bounding radius around robot (m)

@@ -4,13 +4,13 @@
 # val_horizon: control validation horizon for collision detection (s)
 # max_vel_x: max x velcocity (m/s)
 # max_vel_y: max y velcocity (m/s)
-# max_rot_vel: max ratotional velcocity (m/s)
+# max_rot_vel: max ratotional velcocity (rad/s)
 # min_vel_x: min x velcocity (m/s)
 # min_vel_y: min y velcocity (m/s)
-# min_rot_vel: min ratotional velcocity (m/s)
+# min_rot_vel: min ratotional velcocity (rad/s)
 # acc_lim_x: x acceleration limit (m/s^2)
 # acc_lim_y: y acceleration limit (m/s^2)
-# acc_lim_th: : rotational acceleration limit (m/s^2)
+# acc_lim_th: : rotational acceleration limit (rad/s^2)
 frequency: 10.0
 val_dt: 0.1
 val_horizon: 0.5
