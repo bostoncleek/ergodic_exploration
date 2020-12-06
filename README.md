@@ -1,5 +1,13 @@
 # Ergodic Exploration
 
+<!-- [![GitHub release]()]() -->
+
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/bostoncleek/ergodic_exploration/graphs/commit-activity)
+[![PR](https://camo.githubusercontent.com/f96261621753dacf526590825b84f87ccb1db0e6/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f5052732d77656c636f6d652d627269676874677265656e2e7376673f7374796c653d666c6174)](https://github.com/bostoncleek/ergodic_exploration/pulls)
+[![Open Source Love png2](https://camo.githubusercontent.com/60dcf2177b53824e7912a6adfb3ff5e318d14ae4/68747470733a2f2f6261646765732e66726170736f66742e636f6d2f6f732f76312f6f70656e2d736f757263652e706e673f763d313033)](https://github.com/bostoncleek)
+
+<!-- [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)]() -->
+
 - [Motivation](#Motivation) </br>
 - [Exploration](#Exploration) </br>
   - [Ergodic Control](#Ergodic-Control) </br>
@@ -41,7 +49,9 @@ In both the target information density and the mutual information demonstrations
 ### Target Information Density
 Two targets representing the information density are modeled as Gaussians are shown in yellow. The optimized trajectory from the erogdic controller is show in red. The trajectory oscillates from side to side but this behavior is expected. The predicted trajectory from the dynamic window approach is show in blue.
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/SmzaeUUY6QQ" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+See the [full video](https://youtu.be/SmzaeUUY6QQ) in real time.
+
+<!-- <iframe width="560" height="315" src="https://www.youtube.com/embed/SmzaeUUY6QQ" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe> -->
 
 <p align="center">
   <img src="media/two_targets.gif" width="500" height="300"/>
@@ -63,8 +73,9 @@ In the case of the occupancy grid mutual information is the expected information
 
 Bellow the robot explores the atrium using mutual information as the target distribution show in the upper left. The dark areas represent more mutual information. After the robot has fully explored the space the mutual information is zero.
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/iYFPkeTlLi4" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+See the [full video](https://youtu.be/iYFPkeTlLi4) in real time.
 
+<!-- <iframe width="560" height="315" src="https://www.youtube.com/embed/iYFPkeTlLi4" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe> -->
 
 <p align="center">
   <img src="media/mi_atrium.gif" width="500" height="300"/>
