@@ -1,15 +1,16 @@
 # Ergodic Exploration
 
 - [Motivation](#Motivation) </br>
+- [Exploration](#Exploration) </br>
+  - [Ergodic Control](#Ergodic-Control) </br>
+    - [Target Information Density](#Target-Information-Density) </br>
+    - [Mutual Information](#Mutual-Information) </br>
+  - [Exploration Stack](#Exploration-Stack) </br>
+  - [Collision Detection](#Collision-Detection) </br>
 - [Getting Started](#Getting-Started) </br>
   - [Dependencies](#Dependencies) </br>
   - [Workspace](#Workspace) </br>
   - [Launch](#Launch) </br>
-- [Exploration](#Exploration) </br>
-  - [Ergodic Control](#Ergodic-Control) </br>
-  - [Exploration Stack](#Exploration-Stack) </br>
-  - [Collision Detection](#Collision-Detection) </br>
-- [Results](#Results) </br>
 - [Nodes](#Nodes) </br>
   - [Subscribed Topics](#Subscribed-Topics) </br>
   - [Published Topics](#Published-Topics) </br>
@@ -26,6 +27,71 @@ This package requires a user specified target distribution representing the expe
 information gain. The target distribution is represented as a Gaussian or multiple Gaussians.
 
 As an alternative mutual information can be used as the target distribution. Checkout the `feature/sportdeath_mi` branch. That branch is experimental because the mutual information implementation has not been verified yet.
+
+# Exploration
+## Ergodic Control
+Ergodicity is the fraction of time spent sampling an area should be equal to a metric quantifying the density information in that area. The ergodic metric is the difference between the probability density func­tions representing the spatial distribution and the statistical
+representation of the time-averaged trajectory [1]. The objective function includes the ergodic metric and the control cost.
+
+The ergodic controller performs receding horizon trajectory optimization in real time. The real time performance is achieved by integrating the [co-state](https://en.wikipedia.org/wiki/Hamiltonian_(control_theory)#:~:text=%2C%20referred%20to%20as%20costate%20variables,maximize%20the%20Hamiltonian%2C%20for%20all) backwards in time [2].
+
+In both the target information density and the mutual information demonstrations bellow
+[rtabmap_ros](http://wiki.ros.org/rtabmap_ros) was used for localization and mapping using a Velodyne lidar. Odometry was performed using wheel encoders.
+
+### Target Information Density
+Two targets representing the information density are modeled as Gaussians are shown in yellow. The optimized trajectory from the erogdic controller is show in red. The trajectory oscillates from side to side but this behavior is expected. The predicted trajectory from the dynamic window approach is show in blue.
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/SmzaeUUY6QQ" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+<p align="center">
+  <img src="media/two_targets.gif" width="500" height="300"/>
+</p>
+
+<p align="center">
+  <img src="media/explr_traj.gif" width="300" height="300"/>
+</p>
+
+The resulting path from the exploration stack is shown in blue and the small white lines represent local loop closures. The robot was observed visiting each target several times and
+exploring the corridor to the left of the targets.
+
+<p align="center">
+  <img src="media/two_targets.jpg" width="300" height="300"/>
+</p>
+
+### Mutual Information
+In the case of the occupancy grid mutual information is the expected information gain at each grid cell. The `feature/sportdeath_mi` branch computes it using the Fast Continuous Mutual Information (FCMI) algorithm presented in [3]. This is accomplished by simulating a 360 degree range finder.
+
+Bellow the robot explores the atrium using mutual information as the target distribution show in the upper left. The dark areas represent more mutual information. After the robot has fully explored the space the mutual information is zero.
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/iYFPkeTlLi4" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+
+<p align="center">
+  <img src="media/mi_atrium.gif" width="500" height="300"/>
+</p>
+
+The occupancy grid and mutual information map are on the left and right respectively. The robots path is shown in blue and the small white lines represent local loop closures.
+
+<p align="center">
+  <img src="media/mi_explr_atrium.jpg" width="300" height="300"/>
+  <img src="media/mi_map_explr_atrium.jpg" width="300" height="300"/>
+</p>
+
+## Exploration Stack
+The ergodic controller cannot guarantee a collision free trajectory. The dynamic window approach is used as the local planner. The next twist from ergodic controller is propagated forward in for a short time to detect collisions. If there is a collision the dynamic window approach is used. The dynamic window approach forward propagates a constant twist for a short time and disregards it if there is a collisions.
+
+In the case where the ergodic control results in a collision the dynamic window approach uses the optimized trajectory as a reference. The dynamic window approach finds a twist that will produce a trajectory most similar to the reference that is collision free. Similarity between the optimized trajectory and the dynamic window approach trajectory is defined as the distance between the robots x and y position and the absolute difference in heading at each time step. The twist produced by the dynamic window approach is followed for a number of steps to ensure the robot is clear from any obstacles.
+
+It is possible that the twist from the dynamic window approach can cause a collision in a dynamic environment. In this case the dynamic window approach will search the velocity space for the most similar collision free twist to the previous twist given by the dynamic window approach. Similarity is defined here as the inner product of the twist. If the dynamic window approach fails in this case a flag is set for the ergodic controller to replan. The ergodic controller is sensitive to the pose of the robot and is capable of optimizing a different trajectory. This strategy prevents the robot from getting stuck.
+
+## Collision Detection
+To detect obstacle cells in the occupancy grid [Bresenham's circle](http://members.chello.at/~easyfilter/bresenham.html) algorithm is used. The robot's base is modeled at a circle. If there are obstacles within a threshold of the robot's bounding radius the robot is considered to be in a collision state.
+
+Bellow the robot was given a control signal to drive forward. This control sends the robot on a collision course with two obstacles. The dynamic window approach finds a twist capable of maneuvering the robot around each obstacle.
+
+<p align="center">
+  <img src="media/dwa_test.gif" width="500" height="300"/>
+</p>
 
 # Getting Started
 ## Dependencies
@@ -56,27 +122,6 @@ favorite SLAM package. Use the [example launch](https://github.com/bostoncleek/e
 ```
 roslaunch ergodic_exploration exploration.launch
 ```
-
-# Exploration
-## Ergodic Control
-Ergodicity is defined as the fraction of time spent sampling an area should be equal to a metric quantifying the density information in that area. The ergodic metric is the difference between the probability density func­tions representing the spatial distribution and the statistical
-representation of the time-averaged trajectory [1]. The objective function includes the ergodic metric and the control cost.
-
-The ergodic controller performs receding horizon trajectory optimization in real time. The real time performance is achieved by integrating the [co-state](https://en.wikipedia.org/wiki/Hamiltonian_(control_theory)#:~:text=%2C%20referred%20to%20as%20costate%20variables,maximize%20the%20Hamiltonian%2C%20for%20all) backwards in time [2].
-
-## Exploration Stack
-The ergodic controller cannot guarantee a collision free trajectory. The dynamic window approach is used as the local planner. The next twist from ergodic controller is propagated forward in for a short time to detect collisions. If there is a collision the dynamic window approach is used. The dynamic window approach forward propagates a constant twist for a short time and disregards it if there is a collisions.
-
-In the case where the ergodic control results in a collision the dynamic window approach uses the optimized trajectory as a reference. The dynamic window approach finds a twist that will produce a trajectory most similar to the reference that is collision free. Similarity between the optimized trajectory and the dynamic window approach trajectory is defined as the distance between the robots x and y position and the absolute difference in heading at each time step. The twist produced by the dynamic window approach is followed for a number of steps to ensure the robot is clear from any obstacles.
-
-It is possible that the twist from the dynamic window approach can cause a collision in a dynamic environment. In this case the dynamic window approach will search the velocity space for the most similar collision free twist to the previous twist given by the dynamic window approach. Similarity is defined here as the inner product of the twist. If the dynamic window approach fails in this case a flag is set for the ergodic controller to replan. The ergodic controller is sensitive to the pose of the robot and is capable of optimizing a different trajectory. This strategy prevents the robot from getting stuck.
-
-## Collision Detection
-To detect obstacle cells in the occupancy grid [Bresenham's circle](http://members.chello.at/~easyfilter/bresenham.html) algorithm is used. The robot's base is modeled at a circle. If there are obstacles within a threshold of the robot's bounding radius the robot is considered to be in a collision state.
-
-
-# Results
-
 
 # Nodes
 The nodes provided are `explore_cart` and `explore_omni`. The only difference between them
@@ -168,3 +213,6 @@ ergodic exploration,” in American Control Conference, 2013, pp. 4196–4201. [
 [2] Decentralized ergodic control: Distribution-driven sensing and exploration for multi-agent systems
 I. Abraham and T. D. Murphey
 IEEE Robotics and Automation Letters, vol. 3, no. 4, pp. 2987–2994, 2018. [PDF](https://murpheylab.github.io/pdfs/2018RALAbMu.pdf), [Video](https://murpheylab.github.io/videos/2018RALAbMu.mp4)
+
+[3] An Efficient and Continuous Approach to Information-Theoretic Exploration
+T Henderson, V Sze, S Karaman 2020 IEEE International Conference on Robotics and Automation (ICRA), 8566-8572,	2020. [PDF](https://www.rle.mit.edu/eems/wp-content/uploads/2020/03/2020_icra_fcmi.pdf), [Video](https://www.youtube.com/watch?v=j_O1vOCrUME&feature=youtu.be&ab_channel=TheiaHenderson)
