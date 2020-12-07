@@ -12,6 +12,15 @@
   <img src="media/two_targets.gif" width="500" height="300"/>
 </p>
 
+# Motivation
+Currently there are no exploration packages for ROS Noetic. The ROS packages that currently exist perform only frontier exploration. The goal of this project is to provide a robot agnostic information theoretic exploration strategy for known and unknown environments.
+
+This package requires a user specified target distribution representing the expected
+information gain. The target distribution is represented as a Gaussian or multiple Gaussians.
+
+As an alternative mutual information can be used as the target distribution. Checkout the `feature/sportdeath_mi` branch. That branch is experimental because the mutual information implementation has not been verified yet.
+
+# Table of Contents
 - [Motivation](#Motivation) </br>
 - [Exploration](#Exploration) </br>
   - [Ergodic Control](#Ergodic-Control) </br>
@@ -31,14 +40,6 @@
 - [Future Improvements](#Future-Improvements) </br>
 - [Citing Ergodic Exploration](#Citing-Ergodic-Exploration) </br>
 - [Credits](#Credits) </br>
-
-# Motivation
-Currently there are no exploration packages for ROS Noetic. The ROS packages that currently exist perform only frontier exploration. The goal of this project is to provide a robot agnostic information theoretic exploration strategy for known and unknown environments.
-
-This package requires a user specified target distribution representing the expected
-information gain. The target distribution is represented as a Gaussian or multiple Gaussians.
-
-As an alternative mutual information can be used as the target distribution. Checkout the `feature/sportdeath_mi` branch. That branch is experimental because the mutual information implementation has not been verified yet.
 
 # Exploration
 ## Ergodic Control
