@@ -1,4 +1,7 @@
 # Ergodic Exploration
+<p align="center">
+  <img src="media/two_targets.gif" width="500" height="300"/>
+</p>
 
 <!-- [![GitHub release]()]() -->
 
@@ -52,10 +55,6 @@ Two targets representing the information density are modeled as Gaussians are sh
 See the [full video](https://youtu.be/SmzaeUUY6QQ) in real time.
 
 <!-- <iframe width="560" height="315" src="https://www.youtube.com/embed/SmzaeUUY6QQ" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe> -->
-
-<p align="center">
-  <img src="media/two_targets.gif" width="500" height="300"/>
-</p>
 
 <p align="center">
   <img src="media/explr_traj.gif" width="300" height="300"/>
@@ -183,7 +182,7 @@ max_vel_y, min_vel_y, acc_lim_y, and vy_samples. You only need to proved the con
 - num_basis (unsigned int, default: 10): number of basis functions used in composes the trajectory and spatial fourier coefficients
 - buffer_size (unsigned int, default: 1e6): total number of past states stored in memory
 - batch_size (unsigned int, default: 100): number of past states randomly sampled in each ergodic control loop and is used to compose the trajectory fourier coefficients
-- control_weights (std::vector<double>, default: [1, 1, 1]): weights on twist [vx vy w] used by the ergodic controller
+- control_weights (double array[], default: [1, 1, 1]): weights on twist [vx vy w] used by the ergodic controller
 
 ### Dynamic Window Parameters
 - dwa_dt (double, default: 0.1): time step used in dynamic window integration (s)
@@ -206,7 +205,6 @@ max_vel_y, min_vel_y, acc_lim_y, and vy_samples. You only need to proved the con
 
 # Citing Ergodic Exploration
 ## TODO: update version to 1.0.0 and add release tag
-
 ```
 @software{ergodicexploration2020github,
   author = {Boston Cleek},
