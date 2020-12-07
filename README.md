@@ -1,7 +1,4 @@
 # Ergodic Exploration
-<p align="center">
-  <img src="media/two_targets.gif" width="500" height="300"/>
-</p>
 
 <!-- [![GitHub release]()]() -->
 
@@ -10,6 +7,10 @@
 [![Open Source Love png2](https://camo.githubusercontent.com/60dcf2177b53824e7912a6adfb3ff5e318d14ae4/68747470733a2f2f6261646765732e66726170736f66742e636f6d2f6f732f76312f6f70656e2d736f757263652e706e673f763d313033)](https://github.com/bostoncleek)
 
 <!-- [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)]() -->
+
+<p align="center">
+  <img src="media/two_targets.gif" width="500" height="300"/>
+</p>
 
 - [Motivation](#Motivation) </br>
 - [Exploration](#Exploration) </br>
