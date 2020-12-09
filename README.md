@@ -48,7 +48,7 @@ representation of the time-averaged trajectory [1]. The objective function inclu
 
 The ergodic controller performs receding horizon trajectory optimization in real time. The real time performance is achieved by integrating the [co-state](https://en.wikipedia.org/wiki/Hamiltonian_(control_theory)#:~:text=%2C%20referred%20to%20as%20costate%20variables,maximize%20the%20Hamiltonian%2C%20for%20all) backwards in time [2].
 
-In both the target information density and the mutual information demonstrations bellow
+In both the target information density and the mutual information demonstrations below
 [rtabmap_ros](http://wiki.ros.org/rtabmap_ros) was used for localization and mapping using a Velodyne lidar. Odometry was performed using wheel encoders.
 
 ### Target Information Density
@@ -72,7 +72,7 @@ exploring the corridor to the left of the targets.
 ### Mutual Information
 In the case of the occupancy grid mutual information is the expected information gain at each grid cell. The `feature/sportdeath_mi` branch computes it using the Fast Continuous Mutual Information (FCMI) algorithm presented in [3]. This is accomplished by simulating a 360 degree range finder.
 
-Bellow the robot explores the atrium using mutual information as the target distribution show in the upper left. The dark areas represent more mutual information. After the robot has fully explored the space the mutual information is zero.
+Below the robot explores the atrium using mutual information as the target distribution show in the upper left. The dark areas represent more mutual information. After the robot has fully explored the space the mutual information is zero.
 
 See the [full video](https://youtu.be/iYFPkeTlLi4) in real time.
 
@@ -99,7 +99,7 @@ It is possible that the twist from the dynamic window approach can cause a colli
 ## Collision Detection
 To detect obstacle cells in the occupancy grid [Bresenham's circle](http://members.chello.at/~easyfilter/bresenham.html) algorithm is used. The robot's base is modeled at a circle. If there are obstacles within a threshold of the robot's bounding radius the robot is considered to be in a collision state.
 
-Bellow the robot was given a control signal to drive forward. This control sends the robot on a collision course with two obstacles. The dynamic window approach finds a twist capable of maneuvering the robot around each obstacle.
+Below the robot was given a control signal to drive forward. This control sends the robot on a collision course with two obstacles. The dynamic window approach finds a twist capable of maneuvering the robot around each obstacle.
 
 <p align="center">
   <img src="media/dwa_test.gif" width="500" height="300"/>
