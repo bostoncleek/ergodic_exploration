@@ -36,7 +36,6 @@ Basis::Basis(double lx, double ly, unsigned int num_basis)
   }
   // k_.t().print("k");
 
-  // TODO: verify norm on k
   // TODO: verify power on demoninator
   // frequency coefficients weights
   for (unsigned int i = 0; i < total_basis_; i++)

@@ -128,6 +128,5 @@ public:
 private:
   GaussianList gaussians_;  // list of target gaussians
 };
-
 }  // namespace ergodic_exploration
 #endif
