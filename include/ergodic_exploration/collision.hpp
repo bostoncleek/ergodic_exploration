@@ -9,6 +9,8 @@
 
 #include <utility>
 #include <unordered_map>
+#include <tuple>
+#include <limits>
 #include <armadillo>
 
 #include <ergodic_exploration/grid.hpp>
@@ -16,6 +18,7 @@
 namespace ergodic_exploration
 {
 using arma::vec;
+using std::tuple;
 
 /** @brief State of the collision detector */
 enum class CollisionMsg
@@ -63,22 +66,23 @@ public:
 
   /**
    * @brief Compose distance to closest obstacle
-   * @param dmin[out] - min distance
    * @param grid - grid map
    * @param pose - robot state [x, y, theta]
-   * @return state of collision detector
+   * @return state of collision detector and distance to closest obstacle
+   * @details if collision distance to obstacle is zero and if there are no
+   * obstacles distance is max numerical value for a double
    */
-  CollisionMsg minDistance(double& dmin, const GridMap& grid, const vec& pose) const;
+  tuple<CollisionMsg, double> minDistance(const GridMap& grid, const vec& pose) const;
 
   /**
-   * @brief Compose displacement vector from closest obstacle
-   * @param horizontal and vertical displacement vector from closest obstacle
+   * @brief Compose displacement vector from closest obstacle to robot
    * @param grid - grid map
    * @param pose - robot state [x, y, theta]
-   * @return state of collision detector
-   * @details the vector points from obstacle to robot
+   * @return state of collision detector and vector from closest obstacle
+   * @details if collision distance to vector is all zeros and if there are no
+   * obstacles the vector contains the max numerical value for a double
    */
-  CollisionMsg minDirection(vec& disp, const GridMap& grid, const vec& pose) const;
+  tuple<CollisionMsg, vec> minDirection(const GridMap& grid, const vec& pose) const;
 
   /**
    * @brief Check if the given state is a collision

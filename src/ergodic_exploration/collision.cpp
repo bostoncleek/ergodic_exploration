@@ -31,8 +31,8 @@ Collision::Collision(double boundary_radius, double search_radius,
   }
 }
 
-CollisionMsg Collision::minDistance(double& dmin, const GridMap& grid,
-                                    const vec& pose) const
+tuple<CollisionMsg, double> Collision::minDistance(const GridMap& grid,
+                                                   const vec& pose) const
 {
   const auto psg = grid.world2Grid(pose(0), pose(1));
 
@@ -47,27 +47,23 @@ CollisionMsg Collision::minDistance(double& dmin, const GridMap& grid,
 
   if (search(cfg, grid))
   {
-    return CollisionMsg::crash;
+    return std::make_tuple(CollisionMsg::crash, 0.0);
   }
 
   else if (cfg.sqrd_obs != -1)
   {
-    dmin = std::sqrt(static_cast<double>(cfg.sqrd_obs)) * grid.resolution() -
-           boundary_radius_;
+    const double dmin = std::sqrt(static_cast<double>(cfg.sqrd_obs)) * grid.resolution() -
+                        boundary_radius_;
 
-    return CollisionMsg::obstacle;
+    return std::make_tuple(CollisionMsg::obstacle, dmin);
   }
 
-  return CollisionMsg::none;
+  return std::make_tuple(CollisionMsg::none, std::numeric_limits<double>::max());
 }
 
-CollisionMsg Collision::minDirection(vec& disp, const GridMap& grid, const vec& pose) const
+tuple<CollisionMsg, vec> Collision::minDirection(const GridMap& grid,
+                                                 const vec& pose) const
 {
-  // TODO: add parameter to enable collision detection
-  // otherwise it will return the direction at the collision
-
-  disp.zeros(2);
-
   const auto psg = grid.world2Grid(pose(0), pose(1));
 
   CollisionConfig cfg(
@@ -77,21 +73,23 @@ CollisionMsg Collision::minDirection(vec& disp, const GridMap& grid, const vec& 
 
   search(cfg, grid);
 
-  // if (search(cfg, grid))
-  // {
-  //   // std::cout << "Collision" << std::endl;
-  //   return CollisionMsg::crash;
-  // }
+  if (search(cfg, grid))
+  {
+    const vec disp(2, arma::fill::zeros);
+    return std::make_tuple(CollisionMsg::crash, disp);
+  }
 
   if (cfg.sqrd_obs != -1)
   {
     // displacement robot center to obstacle
-    disp(0) = grid.resolution() * static_cast<double>(cfg.dx);
-    disp(1) = grid.resolution() * static_cast<double>(cfg.dy);
-    return CollisionMsg::obstacle;
+    const vec disp = { grid.resolution() * static_cast<double>(cfg.dx),
+                       grid.resolution() * static_cast<double>(cfg.dy) };
+    return std::make_tuple(CollisionMsg::obstacle, disp);
   }
 
-  return CollisionMsg::none;
+  const vec disp = { std::numeric_limits<double>::max(),
+                     std::numeric_limits<double>::max() };
+  return std::make_tuple(CollisionMsg::none, disp);
 }
 
 bool Collision::collisionCheck(const GridMap& grid, const vec& pose) const
