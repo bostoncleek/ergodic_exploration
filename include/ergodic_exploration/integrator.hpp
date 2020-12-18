@@ -40,19 +40,18 @@ public:
 
   /**
    * @brief Simulate the dynamics forward in time
-   * @param xt[out] - trajectory
    * @param model - dynamic model
    * @param x0 - initial state
    * @param ut - control signal (each column is applied at a single time step)
    * @param horizon - length of trajectory in time
+   * @return trajectory
    * @details the boundary condition is not added to the trajectory
    */
   template <class ModelT>
-  void solve(mat& xt, const ModelT& model, const vec& x0, const mat& ut, double horizon);
+  mat solve(const ModelT& model, const vec& x0, const mat& ut, double horizon) const;
 
   /**
    * @brief Solve the co-state variable backwards in time
-   * @param rhot[out] - co-state variable solution
    * @param func - time derivatve of co-state variable
    * @param model - dynamic model
    * @param rhoT - co-state variable terminal condition (zero vector)
@@ -61,13 +60,13 @@ public:
    * @param edx - gradient of the ergodic metric for each state in xt
    * @param bdx - derivatve of barrier function for each state in xt
    * @param horizon - length of trajectory in time
+   * @return co-state variable solution
    * @details co-state is sorted from [t0 tf] no need to index backwards and the
    * boundary condition is not added to the trajectory
    */
   template <class ModelT>
-  void solve(mat& rhot, const CoStateFunc& func, const ModelT& model, const vec& rhoT,
-             const mat& xt, const mat& ut, const mat& edx, const mat& bdx,
-             double horizon);
+  mat solve(const CoStateFunc& func, const ModelT& model, const vec& rhoT, const mat& xt,
+            const mat& ut, const mat& edx, const mat& bdx, double horizon) const;
 
   /**
    * @brief Performs one step of RK4 forward in time
@@ -77,7 +76,7 @@ public:
    * @return new state
    */
   template <class ModelT>
-  vec step(const ModelT& model, const vec& x, const vec& u);
+  vec step(const ModelT& model, const vec& x, const vec& u) const;
 
   /**
    * @brief Performs one step of RK4 backwards in time
@@ -92,7 +91,7 @@ public:
    * the state, control, or derivative at a given time.
    */
   vec step(const CoStateFunc& func, const vec& rho, const vec& gdx, const vec& dbar,
-           const mat& fdx);
+           const mat& fdx) const;
 
 private:
   double dt_;  // time step
@@ -103,13 +102,13 @@ RungeKutta::RungeKutta(double dt) : dt_(dt)
 }
 
 template <class ModelT>
-void RungeKutta::solve(mat& xt, const ModelT& model, const vec& x0, const mat& ut,
-                       double horizon)
+mat RungeKutta::solve(const ModelT& model, const vec& x0, const mat& ut,
+                      double horizon) const
 {
   // TODO: Add terminal x0?
   vec x = x0;
   const auto steps = static_cast<unsigned int>(std::abs(horizon / dt_));
-  xt.resize(x.n_rows, steps);
+  mat xt(x.n_rows, steps);
 
   for (unsigned int i = 0; i < steps; i++)
   {
@@ -117,17 +116,19 @@ void RungeKutta::solve(mat& xt, const ModelT& model, const vec& x0, const mat& u
     x(2) = normalize_angle_PI(x(2));
     xt.col(i) = x;
   }
+
+  return xt;
 }
 
 template <class ModelT>
-void RungeKutta::solve(mat& rhot, const CoStateFunc& func, const ModelT& model,
-                       const vec& rhoT, const mat& xt, const mat& ut, const mat& edx,
-                       const mat& bdx, double horizon)
+mat RungeKutta::solve(const CoStateFunc& func, const ModelT& model, const vec& rhoT,
+                      const mat& xt, const mat& ut, const mat& edx, const mat& bdx,
+                      double horizon) const
 {
   // TODO: Add terminal p(T)?
   vec rho = rhoT;
   const auto steps = static_cast<unsigned int>(std::abs(horizon / dt_));
-  rhot.resize(rho.n_rows, steps);
+  mat rhot(rho.n_rows, steps);
 
   // Iterate backwards
   // this way rhot from t0 to tf in the returned matrix
@@ -137,10 +138,12 @@ void RungeKutta::solve(mat& rhot, const CoStateFunc& func, const ModelT& model,
     rho = step(func, rho, edx.col(i), bdx.col(i), model.fdx(xt.col(i), ut.col(i)));
     rhot.col(i) = rho;
   }
+
+  return rhot;
 }
 
 template <class ModelT>
-vec RungeKutta::step(const ModelT& model, const vec& x, const vec& u)
+vec RungeKutta::step(const ModelT& model, const vec& x, const vec& u) const
 {
   const vec k1 = model(x, u);
   const vec k2 = model(x + dt_ * (0.5 * k1), u);
@@ -150,7 +153,7 @@ vec RungeKutta::step(const ModelT& model, const vec& x, const vec& u)
 }
 
 vec RungeKutta::step(const CoStateFunc& func, const vec& rho, const vec& gdx,
-                     const vec& dbar, const mat& fdx)
+                     const vec& dbar, const mat& fdx) const
 {
   const vec k1 = func(rho, gdx, dbar, fdx);
   const vec k2 = func(rho - dt_ * (0.5 * k1), gdx, dbar, fdx);

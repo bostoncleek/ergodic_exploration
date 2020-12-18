@@ -111,19 +111,19 @@ public:
 
   /**
    * @brief Evaluate the target distribution
-   * @param phi_vals[out] - target evaluated at each grid cell in phi_grid
    * @param trans - translation from map frame to fourier domain
    * @param phi_grid - discretization of fourier domain
+   * @return target evaluated at each grid cell in phi_grid
    * @details the translation is used to translate the mean into the fourier domain
    */
-  void fill(vec& phi_vals, const vec& trans, const mat& phi_grid) const;
+  vec fill(const vec& trans, const mat& phi_grid) const;
 
   /**
    * @brief Visualize target distribution
-   * @param marker_array - each target is visualized as an ellipse
    * @param frame - target frame
+   * @return target is visualized as an ellipse
    */
-  void markers(visualization_msgs::MarkerArray& marker_array, std::string frame) const;
+  visualization_msgs::MarkerArray markers(const std::string& frame) const;
 
 private:
   GaussianList gaussians_;  // list of target gaussians

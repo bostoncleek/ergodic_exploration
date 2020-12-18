@@ -152,8 +152,7 @@ void Exploration<ModelT>::control(const Target& target, const std::string& map_f
   // Initialize the target distribution
   ergodic_control_.setTarget(target);
 
-  visualization_msgs::MarkerArray marker_array;
-  target.markers(marker_array, map_frame_id);
+  const visualization_msgs::MarkerArray marker_array = target.markers(map_frame_id);
   target_pub_.publish(marker_array);
 
   const auto dwa_steps = dwa_.steps();
@@ -195,28 +194,14 @@ void Exploration<ModelT>::control(const Target& target, const std::string& map_f
       if (follow_dwa)
       {
         i++;
-
-        if (i == dwa_steps)
-        {
-          follow_dwa = false;
-        }
-
-        // else
-        // {
-        //   ROS_INFO_NAMED(LOGNAME, "Following DWA! %u ", i);
-        //   // u.print("u");
-        // }
+        follow_dwa = (i != dwa_steps) ? true : false;
       }
 
-      else
+      if (!follow_dwa)
       {
         u = ergodic_control_.control(grid_, pose);
+        const nav_msgs::Path trajectory = ergodic_control_.path(map_frame_id);
 
-        nav_msgs::Path trajectory;
-        trajectory.header.frame_id = map_frame_id;
-        ergodic_control_.path(trajectory);
-
-        // ROS_INFO_STREAM_NAMED(LOGNAME, "Publish ergodic trajectory");
         opt_traj_pub_.publish(trajectory);
       }
 
@@ -227,9 +212,8 @@ void Exploration<ModelT>::control(const Target& target, const std::string& map_f
         // Collision is a result from the previous dwa twist
         if (follow_dwa)
         {
-          // ROS_WARN_STREAM_NAMED(LOGNAME, "Collision from DWA!");
           // If dwa fails twist is set to zeros
-          dwa_.control(u, grid_, pose, vb_, u);
+          u = dwa_.control(grid_, pose, vb_, u);
 
           // Whether or not dwa is successful the
           // ergodic controller will replan next iteration
@@ -239,14 +223,12 @@ void Exploration<ModelT>::control(const Target& target, const std::string& map_f
         // Collision is a result from the ergodic controller
         else
         {
-          // ROS_WARN_STREAM_NAMED(LOGNAME, "Collision from Ergodic Control!");
-          ergodic_control_.optTraj(opt_traj);
+          opt_traj = ergodic_control_.optTraj();
 
           // If dwa fails twist is set to zeros
           if (!dwa_.control(u, grid_, pose, vb_, opt_traj, ergodic_control_.timeStep()))
           {
             // ergodic controller will replan next iteration
-            // ROS_WARN_STREAM_NAMED(LOGNAME, "Trigger ergodic replan");
             follow_dwa = false;
           }
 
@@ -255,13 +237,11 @@ void Exploration<ModelT>::control(const Target& target, const std::string& map_f
             // dwa found at a solution and the robot will follow it
             follow_dwa = true;
             i = 0;
-            // ROS_INFO_NAMED(LOGNAME, "Following DWA! %u ", i);
           }
         }
 
-        nav_msgs::Path dwa_traj;
-        dwa_traj.header.frame_id = map_frame_id;
-        constTwistPath(dwa_traj, pose, u, dwa_.timeStep(), dwa_.horizon());
+        const nav_msgs::Path dwa_traj =
+            constTwistPath(map_frame_id, pose, u, dwa_.timeStep(), dwa_.horizon());
 
         dwa_path_pub_.publish(dwa_traj);
       }  // end validate control
@@ -277,5 +257,4 @@ void Exploration<ModelT>::control(const Target& target, const std::string& map_f
     rate.sleep();
   }  // end while loop
 }
-
 }  // namespace ergodic_exploration

@@ -70,16 +70,14 @@ public:
   vec control(const GridMap& grid, const vec& x);
 
   /**
-   * @brief Compose optimized trajectory
-   * @param opt_traj[out] - optimized trajectory
+   * @brief Return optimized trajectory
    */
-  void optTraj(mat& opt_traj) const;
+  mat optTraj() const;
 
   /**
-   * @brief Previous optimized trajectory
-   * @param path - trajectory
+   * @brief Return optimized trajectory
    */
-  void path(nav_msgs::Path& path) const;
+  nav_msgs::Path path(const std::string& map_frame_id) const;
 
   /**
    * @brief Add the robot's state to memory
@@ -106,10 +104,12 @@ public:
 private:
   /**
    * @brief Compose the gradient of the ergodic metric
+   * @param ck - trajectory fourier coefficients
    * @param xt - forward simulated trajectory in fourier domain
+   * @return ergodic measure gradients
    * @details Updates a matrix containing ergodic metric gradient for each state in xt
    */
-  void gradErgodicMetric(const mat& xt);
+  mat gradErgodicMetric(const vec& ck, const mat& xt);
 
   /**
    * @brief Update the control signal
@@ -120,12 +120,14 @@ private:
   void updateControl(const mat& xt, const mat& rhot);
 
   /**
-   * @brief Gradient of the barrier function to obstacles of the form (x-b)*(x-b)
+   * @brief Gradient of the barrier function
    * @param xt - forward simulated trajectory in fourier domain
+   * @return barrier funcion gradients
    * @details Updates a matrix conatining the barrier function derivatve
-   * for each state in xt
+   * for each state in xt. The barrier function tries to keep the robot's
+   * predicted trajectory within the fourier domain.
    */
-  void barrier(const mat& xt);
+  mat gradBarrier(const mat& xt);
 
 private:
   ModelT model_;         // robot's dynamic model
@@ -137,13 +139,7 @@ private:
   unsigned int steps_;   // number of steps used in integration
   mat Rinv_;             // inverse of the control weight matrix
   mat ut_;               // control signal
-  mat edx_;              // ergodic measure derivatives
-  mat bdx_;              // log loss barrier derivatives
-  mat traj_;             // current trajectory
-  mat phi_grid_;         // target grid
-  vec phi_vals_;         // target values
   vec phik_;             // target distribution fourier coefficients
-  vec ck_;               // trajectory fourier coefficients
   vec rhoT_;             // co-state terminal condition
   vec map_pos_;          // position of map
   vec umin_;             // lower limit on controls
@@ -151,6 +147,7 @@ private:
   vec pose_;             // current state
   Basis basis_;          // fourier basis
   ReplayBuffer buffer_;  // store past states in frame of occupancy map
+  RungeKutta rk4_;       // Runge-Kutta integrator
   CoStateFunc rhodot_;   // co-state function
   Target target_;        // target distribution
 };
@@ -169,12 +166,8 @@ ErgodicControl<ModelT>::ErgodicControl(const ModelT& model, const Collision& col
   , expl_weight_(exploration_weight)
   , steps_(static_cast<unsigned int>(std::abs(horizon / dt)))
   , Rinv_(inv(R))
-  , ut_(3, steps_, arma::fill::zeros)                   // body twist Vb = [vx, vy, w]
-  , edx_(model.state_space, steps_, arma::fill::zeros)  // set heading column to zeros
-  , bdx_(model.state_space, steps_, arma::fill::zeros)  // set heading column to zeros
-  , traj_(model.state_space, steps_)
+  , ut_(3, steps_, arma::fill::zeros)  // body twist Vb = [vx, vy, w]
   , phik_(num_basis * num_basis)
-  , ck_(num_basis * num_basis)
   , rhoT_(model.state_space, arma::fill::zeros)
   , map_pos_(2, arma::fill::zeros)
   , umin_(umin)
@@ -182,6 +175,7 @@ ErgodicControl<ModelT>::ErgodicControl(const ModelT& model, const Collision& col
   , pose_(model.state_space, arma::fill::zeros)
   , basis_(0.0, 0.0, num_basis)  // fourier domain init to 0
   , buffer_(buffer_size, batch_size)
+  , rk4_(dt)
 {
   if (steps_ == 1)
   {
@@ -208,12 +202,10 @@ vec ErgodicControl<ModelT>::control(const GridMap& grid, const vec& x)
   ut_.col(ut_.n_cols - 1).fill(0.0);
 
   // Forward simulation
-  RungeKutta rk4(dt_);
-  rk4.solve(traj_, model_, pose_, ut_, horizon_);
+  const mat traj = rk4_.solve(model_, pose_, ut_, horizon_);
 
   // Sample past states
-  mat xt_total;
-  buffer_.sampleMemory(xt_total, traj_);
+  mat xt_total = buffer_.sampleMemory(traj);
 
   // Transform from map frame to fourier frame
   xt_total.row(0) -= map_pos_(0);
@@ -237,22 +229,20 @@ vec ErgodicControl<ModelT>::control(const GridMap& grid, const vec& x)
   //////////////////////////////////////////////////////////////////////////////
 
   // Extract optimized trajectory in fourier domain
-  mat xt = xt_total.cols(xt_total.n_cols - steps_, xt_total.n_cols - 1);
+  const mat xt = xt_total.cols(xt_total.n_cols - steps_, xt_total.n_cols - 1);
 
   // Update the trajectory fourier coefficients
-  basis_.trajCoeff(ck_, xt_total);
+  const vec ck = basis_.trajCoeff(xt_total);
 
-  // Gradient of he ergodic measure w.r.t the state
-  gradErgodicMetric(xt);
-  edx_.rows(0, 1) *= expl_weight_;
+  // Gradient of the ergodic measure w.r.t the state
+  const mat edx = gradErgodicMetric(ck, xt);
 
-  // Barrier function
-  barrier(xt);
-  // bdx_.print("bdx_:");
+  // Gradient of the barrier function w.r.t the state
+  const mat bdx = gradBarrier(xt);
+  // bdx_.print("bdx:");
 
   // Backwards pass
-  mat rhot;
-  rk4.solve(rhot, rhodot_, model_, rhoT_, xt, ut_, edx_, bdx_, horizon_);
+  const mat rhot = rk4_.solve(rhodot_, model_, rhoT_, xt, ut_, edx, bdx, horizon_);
 
   //////////////////////////////////////////////////////////////////////////////
   // DEBUG
@@ -289,22 +279,19 @@ vec ErgodicControl<ModelT>::control(const GridMap& grid, const vec& x)
 }
 
 template <class ModelT>
-void ErgodicControl<ModelT>::optTraj(mat& opt_traj) const
+mat ErgodicControl<ModelT>::optTraj() const
 {
-  RungeKutta rk4(dt_);
-  opt_traj.resize(model_.state_space, steps_);
-  rk4.solve(opt_traj, model_, pose_, ut_, horizon_);
+  return rk4_.solve(model_, pose_, ut_, horizon_);
 }
 
 template <class ModelT>
-void ErgodicControl<ModelT>::path(nav_msgs::Path& path) const
+nav_msgs::Path ErgodicControl<ModelT>::path(const std::string& map_frame_id) const
 {
+  nav_msgs::Path path;
+  path.header.frame_id = map_frame_id;
   path.poses.resize(steps_);
 
-  RungeKutta rk4(dt_);
-  mat opt_traj(model_.state_space, steps_);
-  rk4.solve(opt_traj, model_, pose_, ut_, horizon_);
-
+  const mat opt_traj = rk4_.solve(model_, pose_, ut_, horizon_);
   for (unsigned int i = 0; i < opt_traj.n_cols; i++)
   {
     path.poses.at(i).pose.position.x = opt_traj(0, i);
@@ -318,6 +305,8 @@ void ErgodicControl<ModelT>::path(nav_msgs::Path& path) const
     path.poses.at(i).pose.orientation.z = quat.z();
     path.poses.at(i).pose.orientation.w = quat.w();
   }
+
+  return path;
 }
 
 template <class ModelT>
@@ -366,10 +355,9 @@ void ErgodicControl<ModelT>::configTarget(const GridMap& grid)
   const auto nx = axis_length(0.0, basis_.lx_, resolution_) + 1;
   const auto ny = axis_length(0.0, basis_.ly_, resolution_) + 1;
 
-  phi_grid_.resize(2, nx * ny);
-  phi_vals_.resize(nx * ny);
-
   // Construct the grid
+  mat phi_grid(2, nx * ny);
+
   unsigned int col = 0;
   auto y = 0.0;
   for (unsigned int i = 0; i < ny; i++)
@@ -377,8 +365,8 @@ void ErgodicControl<ModelT>::configTarget(const GridMap& grid)
     auto x = 0.0;
     for (unsigned int j = 0; j < nx; j++)
     {
-      phi_grid_(0, col) = x;
-      phi_grid_(1, col) = y;
+      phi_grid(0, col) = x;
+      phi_grid(1, col) = y;
       // std::cout << x << " " << y << std::endl;
 
       col++;
@@ -388,32 +376,36 @@ void ErgodicControl<ModelT>::configTarget(const GridMap& grid)
   }
 
   // Evaluate each grid cell
-  target_.fill(phi_vals_, map_pos_, phi_grid_);
+  const vec phi_vals = target_.fill(map_pos_, phi_grid);
 
-  basis_.spatialCoeff(phik_, phi_vals_, phi_grid_);
+  phik_ = basis_.spatialCoeff(phi_vals, phi_grid);
 
   std::cout << "done" << std::endl;
 }
 
 template <class ModelT>
-void ErgodicControl<ModelT>::gradErgodicMetric(const mat& xt)
+mat ErgodicControl<ModelT>::gradErgodicMetric(const vec& ck, const mat& xt)
 {
-  const vec fourier_diff = basis_.lamdak_ % (ck_ - phik_);
+  // element wise multiplication
+  const vec fourier_diff = basis_.lamdak_ % (ck - phik_);
 
-  mat dfk;
+  mat edx(model_.state_space, steps_);
   for (unsigned int i = 0; i < steps_; i++)
   {
-    basis_.gradFourierBasis(dfk, xt.col(i));
-    edx_(span(0, 1), span(i, i)) = dfk * fourier_diff;
+    edx(span(0, 1), span(i, i)) = basis_.gradFourierBasis(xt.col(i)) * fourier_diff;
+
+    // set heading to zero
+    edx(2, i) = 0.0;
   }
 
-  // edx_ *= 1.0 / steps_;
+  edx.rows(0, 1) *= expl_weight_;
+  // edx_ *= 1.0 / steps_ * expl_weight_;
+  return edx;
 }
 
 template <class ModelT>
 void ErgodicControl<ModelT>::updateControl(const mat& xt, const mat& rhot)
 {
-  // TODO: apply filter to control signal (savgol filter)
   for (unsigned int i = 0; i < xt.n_cols; i++)
   {
     // rhot is already sorted from t0 to tf
@@ -427,27 +419,26 @@ void ErgodicControl<ModelT>::updateControl(const mat& xt, const mat& rhot)
 }
 
 template <class ModelT>
-void ErgodicControl<ModelT>::barrier(const mat& xt)
+mat ErgodicControl<ModelT>::gradBarrier(const mat& xt)
 {
   // TODO: load from param sever
   const auto weight = 25.0;
   const auto eps = 0.05;
 
+  // set heading column to zeros
+  mat bdx(model_.state_space, steps_, arma::fill::zeros);
   for (unsigned int i = 0; i < steps_; i++)
   {
-    vec dbar(2, arma::fill::zeros);
+    bdx(0, i) += 2.0 * (xt(0, i) > basis_.lx_ - eps) * (xt(0, i) - (basis_.lx_ - eps));
+    bdx(1, i) += 2.0 * (xt(1, i) > basis_.ly_ - eps) * (xt(1, i) - (basis_.ly_ - eps));
 
-    dbar(0) += 2.0 * (xt(0, i) > basis_.lx_ - eps) * (xt(0, i) - (basis_.lx_ - eps));
-    dbar(1) += 2.0 * (xt(1, i) > basis_.ly_ - eps) * (xt(1, i) - (basis_.ly_ - eps));
-
-    dbar(0) += 2.0 * (xt(0, i) < eps) * (xt(0, i) - eps);
-    dbar(1) += 2.0 * (xt(1, i) < eps) * (xt(1, i) - eps);
-
-    // dbar.print("dbar");
-
-    bdx_(span(0, 1), span(i, i)) = weight * dbar;
+    bdx(0, i) += 2.0 * (xt(0, i) < eps) * (xt(0, i) - eps);
+    bdx(1, i) += 2.0 * (xt(1, i) < eps) * (xt(1, i) - eps);
   }
-}
 
+  bdx.rows(0, 1) *= weight;
+
+  return bdx;
+}
 }  // namespace ergodic_exploration
 #endif

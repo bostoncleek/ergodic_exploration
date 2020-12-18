@@ -18,23 +18,16 @@
     acc_lim_th - rotational acceleration limit (rad/s^2)
     boundary_radius - bounding radius around robot (m)
     search_radius - max search radius for collision detection (m)
-    obstacle_threshold - obstacles within radius from boundary are cosidered collisions (m)
-    occupied_threshold - occupancy grid cell probability to be considered an obstacle [0 1]
-    ec_dt - time step used in integration (s)
-    ec_horizon - control horizon (s)
-    target_resolution - target grid resolution (m)
-    expl_weight - ergodic exploration weight
-    num_basis - number of basis functions
-    buffer_size - total number of past states stored
-    batch_size - number of past states randomly sampled in each control loop
-    control_weights - weights on twist [vx w]
-    dwa_dt - time step used in integration (s)
-    dwa_horizon - control horizon (s)
-    acc_dt - time step the acceleration limits are applied (s)
-    vx_samples - number of x velcocity samples
-    vth_samples - number of rotational velcocity samples
-    means - target x and y means (m)
-    sigmas - target x and y standard deviations (m)
+    obstacle_threshold - obstacles within radius from boundary are cosidered collisions
+ (m) occupied_threshold - occupancy grid cell probability to be considered an obstacle [0
+ 1] ec_dt - time step used in integration (s) ec_horizon - control horizon (s) target_resolution
+ - target grid resolution (m) expl_weight - ergodic exploration weight num_basis - number
+ of basis functions buffer_size - total number of past states stored batch_size - number
+ of past states randomly sampled in each control loop control_weights - weights on twist
+ [vx w] dwa_dt - time step used in integration (s) dwa_horizon - control horizon (s) acc_dt
+ - time step the acceleration limits are applied (s) vx_samples - number of x velcocity
+ samples vth_samples - number of rotational velcocity samples means - target x and y means
+ (m) sigmas - target x and y standard deviations (m)
 
  PUBLISHES:
     cmd_vel (geometry_msgs/Twist) - body twist
@@ -163,9 +156,9 @@ int main(int argc, char** argv)
                                  expl_weight, num_basis, buffer_size, batch_size, R, umin,
                                  umax);
 
-  DynamicWindow dwa(collision, dwa_dt, dwa_horizon, acc_dt, acc_lim_x, 0.0,
-                    acc_lim_th, max_vel_x, min_vel_x, 0.0, 0.0, max_rot_vel,
-                    min_rot_vel, vx_samples, 0.0, vth_samples);
+  DynamicWindow dwa(collision, dwa_dt, dwa_horizon, acc_dt, acc_lim_x, 0.0, acc_lim_th,
+                    max_vel_x, min_vel_x, 0.0, 0.0, max_rot_vel, min_rot_vel, vx_samples,
+                    0.0, vth_samples);
 
   ergodic_exploration::Exploration<SimpleCart> exploration(nh, ergodic_control, collision,
                                                            dwa);

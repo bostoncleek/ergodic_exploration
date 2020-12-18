@@ -58,12 +58,14 @@ DynamicWindow::DynamicWindow(const Collision& collision, double dt, double horiz
   }
 }
 
-bool DynamicWindow::control(vec& u_opt, const GridMap& grid, const vec& x0, const vec& vb,
-                            const vec& vref) const
+vec DynamicWindow::control(const GridMap& grid, const vec& x0, const vec& vb,
+                           const vec& vref) const
 {
   // Window bounds and discretization
   vec vel_lower(3, arma::fill::zeros);  // twist lower limits
   vec delta_vb(3, arma::fill::zeros);   // twist discretization
+  vec u_opt(3, arma::fill::zeros);      // optimal twist
+  vec u(3);                             // sample twist
 
   window(vel_lower, delta_vb, vb);
 
@@ -71,8 +73,6 @@ bool DynamicWindow::control(vec& u_opt, const GridMap& grid, const vec& x0, cons
   auto min_cost = std::numeric_limits<double>::max();
 
   bool soln_found = false;
-
-  vec u(3);
   auto vx = vel_lower(0);
   for (unsigned int i = 0; i < vx_samples_; i++)
   {
@@ -109,10 +109,9 @@ bool DynamicWindow::control(vec& u_opt, const GridMap& grid, const vec& x0, cons
   if (!soln_found)
   {
     std::cout << "DWA Failed! Not even 1 solution found" << std::endl;
-    u_opt.zeros();
   }
 
-  return soln_found;
+  return u_opt;
 }
 
 bool DynamicWindow::control(vec& u_opt, const GridMap& grid, const vec& x0, const vec& vb,

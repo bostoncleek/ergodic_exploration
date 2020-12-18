@@ -30,15 +30,18 @@ void ReplayBuffer::append(const vec& x)
   std::cout << "WARNING: Buffer is full" << std::endl;
 }
 
-void ReplayBuffer::sampleMemory(mat& xt_total, const mat& xt)
+mat ReplayBuffer::sampleMemory(const mat& xt) const
 {
   if (memory_.empty())
   {
-    xt_total = xt;
+    return xt;
   }
 
+  // total states
+  mat xt_total;
+
   // Concatenate the current store states with predicted trajectory
-  else if (memory_.size() <= batch_size_)
+  if (memory_.size() <= batch_size_)
   {
     const auto num_stored = memory_.size();
     const auto num_states = xt.n_cols + num_stored;
@@ -72,5 +75,7 @@ void ReplayBuffer::sampleMemory(mat& xt_total, const mat& xt)
     // Copy predicted trajectory to end
     xt_total.cols(batch_size_, num_states - 1) = xt;
   }
+
+  return xt_total;
 }
 }  // namespace ergodic_exploration

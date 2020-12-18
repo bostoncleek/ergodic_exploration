@@ -34,10 +34,10 @@ public:
 
   /**
    * @brief Sample states from memory
-   * @param xt_total[out] - predicted trajectory + sampled states
-   * @paramxt - predicted trajectory
+   * @param xt - predicted trajectory
+   * @return predicted trajectory + sampled states
    */
-  void sampleMemory(mat& xt_total, const mat& xt);
+  mat sampleMemory(const mat& xt) const;
 
 private:
   unsigned int buffer_size_;                      // total number of past states in memory

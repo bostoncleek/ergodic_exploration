@@ -265,15 +265,18 @@ inline bool validate_control(const Collision& collision, const GridMap& grid,
 
 /**
  * @brief Visualize path from following a constant twist
- * @param path - trajectory
  * @param x0 - current state
  * @param u - twist [vx, vy, w]
  * @param dt - time step
  * @param horizon - control horizon
+ * @return trajectory
  */
-inline void constTwistPath(nav_msgs::Path& path, const vec& x0, const vec& u, double dt,
-                           double horizon)
+inline nav_msgs::Path constTwistPath(const std::string& map_frame_id, const vec& x0,
+                                     const vec& u, double dt, double horizon)
 {
+  nav_msgs::Path path;
+  path.header.frame_id = map_frame_id;
+
   const auto steps = static_cast<unsigned int>(std::abs(horizon / dt));
   path.poses.resize(steps);
 
@@ -295,6 +298,8 @@ inline void constTwistPath(nav_msgs::Path& path, const vec& x0, const vec& u, do
     path.poses.at(i).pose.orientation.z = quat.z();
     path.poses.at(i).pose.orientation.w = quat.w();
   }
+
+  return path;
 }
 
 }  // namespace ergodic_exploration

@@ -44,20 +44,22 @@ double Target::evaluate(const vec& pt, const vec& trans) const
   return val;
 }
 
-void Target::fill(vec& phi_vals, const vec& trans, const mat& phi_grid) const
+vec Target::fill(const vec& trans, const mat& phi_grid) const
 {
+  vec phi_vals(phi_grid.n_cols);
   for (unsigned int i = 0; i < phi_grid.n_cols; i++)
   {
     phi_vals(i) = evaluate(phi_grid.col(i), trans);
   }
 
-  // normalize distribution values [0 1]
+  // normalize distribution values to sum to 1
   phi_vals /= sum(phi_vals);
+  return phi_vals;
 }
 
-void Target::markers(visualization_msgs::MarkerArray& marker_array,
-                     std::string frame) const
+visualization_msgs::MarkerArray Target::markers(const std::string& frame) const
 {
+  visualization_msgs::MarkerArray marker_array;
   marker_array.markers.resize(gaussians_.size());
 
   for (unsigned int i = 0; i < gaussians_.size(); i++)
@@ -81,5 +83,7 @@ void Target::markers(visualization_msgs::MarkerArray& marker_array,
     marker_array.markers.at(i).color.b = 0.6;
     marker_array.markers.at(i).color.a = 0.5;
   }
+
+  return marker_array;
 }
 }  // namespace ergodic_exploration

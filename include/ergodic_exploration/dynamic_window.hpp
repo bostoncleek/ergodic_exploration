@@ -49,16 +49,14 @@ public:
 
   /**
    * @brief Compose best control
-   * @param u_opt[out] - optimal twist [vx, vy, w]
    * @param grid - grid map
    * @param x0 - current state [x, y, theta]
    * @param vb - current twist [vx, vy, w]
    * @param vref - desired twist to follow [vx, vy, w]
-   * @return true if at least one solution is found
+   * @return optimal twist [vx, vy, w]
    * @details u_opt is set to zeros if no solution found
    */
-  bool control(vec& u_opt, const GridMap& grid, const vec& x0, const vec& vb,
-               const vec& vref) const;
+  vec control(const GridMap& grid, const vec& x0, const vec& vb, const vec& vref) const;
 
   /**
    * @brief Compose best control
