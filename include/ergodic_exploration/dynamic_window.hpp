@@ -8,10 +8,10 @@
 #define DYNAMIC_WINDOW_HPP
 
 #include <cmath>
-#include <limits>
 
 #include <ergodic_exploration/grid.hpp>
 #include <ergodic_exploration/collision.hpp>
+#include <ergodic_exploration/numerics.hpp>
 
 namespace ergodic_exploration
 {
@@ -53,24 +53,24 @@ public:
    * @param x0 - current state [x, y, theta]
    * @param vb - current twist [vx, vy, w]
    * @param vref - desired twist to follow [vx, vy, w]
-   * @return optimal twist [vx, vy, w]
+   * @return true if at least 1 solution found and optimal twist [vx, vy, w]
    * @details u_opt is set to zeros if no solution found
    */
-  vec control(const GridMap& grid, const vec& x0, const vec& vb, const vec& vref) const;
+  tuple<bool, vec> control(const GridMap& grid, const vec& x0, const vec& vb,
+                           const vec& vref) const;
 
   /**
    * @brief Compose best control
-   * @param u_opt[out] - optimal twist [vx, vy, w]
    * @param grid - grid map
    * @param x0 - current state [x, y, theta]
    * @param vb - current twist [vx, vy, w]
    * @param xt_ref - reference trajectory
    * @param dt_ref - reference trajectory time discretization
-   * @return true if at least one solution is found
+   * @return true if at least one solution is found and optimal twist [vx, vy, w]
    * @details u_opt is set to zeros if no solution found
    */
-  bool control(vec& u_opt, const GridMap& grid, const vec& x0, const vec& vb,
-               const mat& xt_ref, double dt_ref) const;
+  tuple<bool, vec> control(const GridMap& grid, const vec& x0, const vec& vb,
+                           const mat& xt_ref, double dt_ref) const;
 
   /** @brief return time step */
   double timeStep() const
@@ -93,39 +93,38 @@ public:
 private:
   /**
    * @brief Compose window size and discretization
-   * @param vel_lower[out] - twist lower limits
-   * @param delta_vb[out] - twist discretization
    * @param vb - current twist [vx, vy, w]
+   * @return twist lower limits and twist discretization
    */
-  void window(vec& vel_lower, vec& delta_vb, const vec& vb) const;
+  tuple<vec, vec> window(const vec& vb) const;
 
   /**
-   * @brief Objective function
-   * @param cost[out] - cost of objective function
+   * @brief Objective function for reference twist
    * @param grid - grid map
    * @param x0 - current state [x, y, theta]
    * @param vref - desired twist to follow [vx, vy, w]
    * @param u - twist from dynamic window
-   * @return true if the twist is collision free
-   * @details - finds best twist to reference twist that is collision free
+   * @return cost of the current sampled twist
+   * @details - Finds best twist to reference twist that is collision free. If there
+   * is a collision the cost is the max numerical value for a double.
    */
-  bool objective(double& cost, const GridMap& grid, const vec& x0, const vec& vref,
-                 const vec& u) const;
+  double objective(const GridMap& grid, const vec& x0, const vec& vref,
+                   const vec& u) const;
 
   /**
-   * @brief Objective function
-   * @param cost[out] - cost of objective function
+   * @brief Objective function for reference trajectory
    * @param grid - grid map
    * @param x0 - current state [x, y, theta]
    * @param u - twist from dynamic window
    * @param xt_ref - reference trajectory
    * @param tf - reference trajectory length in time
-   * @return true if the twist is collision free
-   * @details - finds best twist that generates a path closest to the reference
-   * trajectory that is collision free
+   * @return cost of the current sampled twist
+   * @details - Finds best twist that generates a path closest to the reference
+   * trajectory that is collision free. If there is a collision the cost is the
+   * max numerical value for a double.
    */
-  bool objective(double& cost, const GridMap& grid, const vec& x0, const vec& u,
-                 const mat& xt_ref, double tf) const;
+  double objective(const GridMap& grid, const vec& x0, const vec& u, const mat& xt_ref,
+                   double tf) const;
 
 private:
   Collision collision_;                        // collision detection

@@ -156,7 +156,6 @@ void Exploration<ModelT>::control(const Target& target, const std::string& map_f
   target_pub_.publish(marker_array);
 
   const auto dwa_steps = dwa_.steps();
-  mat opt_traj;
   vec u(3, arma::fill::zeros);
   vec pose(3, arma::fill::zeros);
 
@@ -207,13 +206,13 @@ void Exploration<ModelT>::control(const Target& target, const std::string& map_f
 
       if (!validate_control(collision_, grid_, pose, u, val_dt, val_horizon))
       {
-        ROS_INFO_STREAM_NAMED(LOGNAME, "Collision detected! Enabling DWA!");
+        // ROS_INFO_STREAM_NAMED(LOGNAME, "Collision detected! Enabling DWA!");
 
         // Collision is a result from the previous dwa twist
         if (follow_dwa)
         {
           // If dwa fails twist is set to zeros
-          u = dwa_.control(grid_, pose, vb_, u);
+          u = std::get<vec>(dwa_.control(grid_, pose, vb_, u));
 
           // Whether or not dwa is successful the
           // ergodic controller will replan next iteration
@@ -223,19 +222,21 @@ void Exploration<ModelT>::control(const Target& target, const std::string& map_f
         // Collision is a result from the ergodic controller
         else
         {
-          opt_traj = ergodic_control_.optTraj();
+          // Reference trajectory for dwa
+          const mat opt_traj = ergodic_control_.optTraj();
 
           // If dwa fails twist is set to zeros
-          if (!dwa_.control(u, grid_, pose, vb_, opt_traj, ergodic_control_.timeStep()))
-          {
-            // ergodic controller will replan next iteration
-            follow_dwa = false;
-          }
+          const tuple<bool, vec> dwa_state =
+              dwa_.control(grid_, pose, vb_, opt_traj, ergodic_control_.timeStep());
 
-          else
+          u = std::get<vec>(dwa_state);
+
+          // if dwa found at a solution and the robot will follow it
+          // else ergodic controller will replan next iteration
+          follow_dwa = std::get<bool>(dwa_state);
+
+          if (follow_dwa)
           {
-            // dwa found at a solution and the robot will follow it
-            follow_dwa = true;
             i = 0;
           }
         }

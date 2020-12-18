@@ -58,70 +58,60 @@ DynamicWindow::DynamicWindow(const Collision& collision, double dt, double horiz
   }
 }
 
-vec DynamicWindow::control(const GridMap& grid, const vec& x0, const vec& vb,
-                           const vec& vref) const
+tuple<bool, vec> DynamicWindow::control(const GridMap& grid, const vec& x0, const vec& vb,
+                                        const vec& vref) const
 {
-  // Window bounds and discretization
-  vec vel_lower(3, arma::fill::zeros);  // twist lower limits
-  vec delta_vb(3, arma::fill::zeros);   // twist discretization
-  vec u_opt(3, arma::fill::zeros);      // optimal twist
-  vec u(3);                             // sample twist
-
-  window(vel_lower, delta_vb, vb);
+  // window limits and discretization
+  const std::tuple<vec, vec> window_config = window(vb);
 
   // Search velocity space
   auto min_cost = std::numeric_limits<double>::max();
 
-  bool soln_found = false;
-  auto vx = vel_lower(0);
+  vec u_opt(3, arma::fill::zeros);  // optimal twist
+  vec u(3, arma::fill::zeros);      // sample twist
+
+  auto vx = std::get<0>(window_config)(0);
   for (unsigned int i = 0; i < vx_samples_; i++)
   {
-    auto vy = vel_lower(1);
+    auto vy = std::get<0>(window_config)(1);
     for (unsigned int j = 0; j < vy_samples_; j++)
     {
-      auto w = vel_lower(2);
+      auto w = std::get<0>(window_config)(2);
       for (unsigned int k = 0; k < vth_samples_; k++)
       {
         u(0) = vx;
         u(1) = vy;
         u(2) = w;
 
-        auto cost = 0.0;
-        if (!objective(cost, grid, x0, vref, u))
+        const auto cost = objective(grid, x0, vref, u);
+        // minimize cost
+        if (cost < min_cost)
         {
-          // minimize cost
-          if (cost < min_cost)
-          {
-            min_cost = cost;
-            u_opt = u;
-            soln_found = true;
-          }
+          min_cost = cost;
+          u_opt = u;
         }
 
-        w += delta_vb(2);
+        w += std::get<1>(window_config)(2);
       }  // end w loop
-      vy += delta_vb(1);
+      vy += std::get<1>(window_config)(1);
     }  // end vy loop
-    vx += delta_vb(0);
+    vx += std::get<1>(window_config)(0);
   }  // end vx loop
 
-  // simple recovery behavior rotate in place
-  if (!soln_found)
+  if (almost_equal(min_cost, std::numeric_limits<double>::max()))
   {
     std::cout << "DWA Failed! Not even 1 solution found" << std::endl;
+    return std::make_tuple(false, u_opt);
   }
 
-  return u_opt;
+  return std::make_tuple(true, u_opt);
 }
 
-bool DynamicWindow::control(vec& u_opt, const GridMap& grid, const vec& x0, const vec& vb,
-                            const mat& xt_ref, double dt_ref) const
+tuple<bool, vec> DynamicWindow::control(const GridMap& grid, const vec& x0, const vec& vb,
+                                        const mat& xt_ref, double dt_ref) const
 {
-  // Window bounds and discretization
-  vec vel_lower(3, arma::fill::zeros);  // twist lower limits
-  vec delta_vb(3, arma::fill::zeros);   // twist discretization
-
-  window(vel_lower, delta_vb, vb);
+  // window limits and discretization
+  const tuple<vec, vec> window_config = window(vb);
 
   // Time parameterization of the reference trajectory
   const double tf = static_cast<double>(xt_ref.n_cols) * dt_ref;
@@ -129,54 +119,52 @@ bool DynamicWindow::control(vec& u_opt, const GridMap& grid, const vec& x0, cons
   // Search velocity space
   auto min_cost = std::numeric_limits<double>::max();
 
-  bool soln_found = false;
+  vec u_opt(3, arma::fill::zeros);  // optimal twist
+  vec u(3, arma::fill::zeros);      // sample twist
 
-  vec u(3);
-  auto vx = vel_lower(0);
+  auto vx = std::get<0>(window_config)(0);
   for (unsigned int i = 0; i < vx_samples_; i++)
   {
-    auto vy = vel_lower(1);
+    auto vy = std::get<0>(window_config)(1);
     for (unsigned int j = 0; j < vy_samples_; j++)
     {
-      auto w = vel_lower(2);
+      auto w = std::get<0>(window_config)(2);
       for (unsigned int k = 0; k < vth_samples_; k++)
       {
         u(0) = vx;
         u(1) = vy;
         u(2) = w;
 
-        auto cost = 0.0;
-        if (!objective(cost, grid, x0, u, xt_ref, tf))
+        const auto cost = objective(grid, x0, u, xt_ref, tf);
+        // minimize cost
+        if (cost < min_cost)
         {
-          // minimize cost
-          if (cost < min_cost)
-          {
-            min_cost = cost;
-            u_opt = u;
-            soln_found = true;
-          }
+          min_cost = cost;
+          u_opt = u;
         }
 
-        w += delta_vb(2);
+        w += std::get<1>(window_config)(2);
       }  // end w loop
-      vy += delta_vb(1);
+      vy += std::get<1>(window_config)(1);
     }  // end vy loop
-    vx += delta_vb(0);
+    vx += std::get<1>(window_config)(0);
   }  // end vx loop
 
-  // simple recovery behavior rotate in place
-  if (!soln_found)
+  if (almost_equal(min_cost, std::numeric_limits<double>::max()))
   {
     std::cout << "DWA Failed! Not even 1 solution found" << std::endl;
-    u_opt.zeros();
+    return std::make_tuple(false, u_opt);
   }
 
-  return soln_found;
+  return std::make_tuple(true, u_opt);
 }
 
-void DynamicWindow::window(vec& vel_lower, vec& delta_vb, const vec& vb) const
+tuple<vec, vec> DynamicWindow::window(const vec& vb) const
 {
+  // Window bounds and discretization
   vec vel_upper(3, arma::fill::zeros);  // twist upper limits
+  vec vel_lower(3, arma::fill::zeros);  // twist lower limits
+  vec delta_vb(3, arma::fill::zeros);   // twist discretization
 
   vel_lower(0) = std::max(vb(0) - acc_lim_x_ * acc_dt_, min_vel_x_);
   vel_upper(0) = std::min(vb(0) + acc_lim_x_ * acc_dt_, max_vel_x_);
@@ -211,10 +199,12 @@ void DynamicWindow::window(vec& vel_lower, vec& delta_vb, const vec& vb) const
   // std::cout << "dvx: " << delta_vb(0) << std::endl;
   // std::cout << "dvy: " << delta_vb(1) << std::endl;
   // std::cout << "dw: " << delta_vb(2) << std::endl;
+
+  return std::make_tuple(vel_lower, delta_vb);
 }
 
-bool DynamicWindow::objective(double& cost, const GridMap& grid, const vec& x0,
-                              const vec& vref, const vec& u) const
+double DynamicWindow::objective(const GridMap& grid, const vec& x0, const vec& vref,
+                                const vec& u) const
 {
   vec pose = x0;
   // follow constant twist
@@ -224,25 +214,24 @@ bool DynamicWindow::objective(double& cost, const GridMap& grid, const vec& x0,
     pose += delta;
     pose(2) = normalize_angle_PI(pose(2));
 
-    auto dmin = std::numeric_limits<double>::max();
-    if (collision_.minDistance(dmin, grid, pose) == CollisionMsg::crash)
+    if (collision_.collisionCheck(grid, pose))
     {
-      return true;
+      return std::numeric_limits<double>::max();
     }
   }
 
   // control error;
   const vec cntrl_error = vref - u;
-  cost += dot(cntrl_error, cntrl_error);
-
-  return false;
+  return dot(cntrl_error, cntrl_error);
 }
 
-bool DynamicWindow::objective(double& cost, const GridMap& grid, const vec& x0,
-                              const vec& u, const mat& xt_ref, double tf) const
+double DynamicWindow::objective(const GridMap& grid, const vec& x0,
+                                             const vec& u, const mat& xt_ref,
+                                             double tf) const
 {
   vec pose = x0;
-  double t = 0.0;
+  auto t = 0.0;
+  auto cost = 0.0;
 
   // follow constant twist
   const vec delta = integrate_twist(pose, u, dt_);
@@ -251,10 +240,9 @@ bool DynamicWindow::objective(double& cost, const GridMap& grid, const vec& x0,
     pose += delta;
     pose(2) = normalize_angle_PI(pose(2));
 
-    auto dmin = std::numeric_limits<double>::max();
-    if (collision_.minDistance(dmin, grid, pose) == CollisionMsg::crash)
+    if (collision_.collisionCheck(grid, pose))
     {
-      return true;
+      return std::numeric_limits<double>::max();
     }
 
     // index into reference trajectory
@@ -266,7 +254,6 @@ bool DynamicWindow::objective(double& cost, const GridMap& grid, const vec& x0,
     t += dt_;
   }
 
-  return false;
+  return cost;
 }
-
 }  // namespace ergodic_exploration
