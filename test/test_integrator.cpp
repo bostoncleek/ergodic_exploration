@@ -20,9 +20,9 @@ TEST(RungeKuttaTest, Simulate)
   ut.row(0).fill(1.0);
   ut.row(1).fill(1.0);
 
-  arma::vec x0 = { 0.0, 0.0, 0.0 };
-  ergodic_exploration::RungeKutta rk4(0.1);
-  arma::mat xt = rk4.solve(cart, x0, ut, horizon);
+  const arma::vec x0 = { 0.0, 0.0, 0.0 };
+  const ergodic_exploration::RungeKutta rk4(0.1);
+  const arma::mat xt = rk4.solve(cart, x0, ut, horizon);
 
   // Expected to drive in straight line along the x-axis
   ASSERT_DOUBLE_EQ(xt(0, 0), 0.01);
