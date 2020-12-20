@@ -81,7 +81,7 @@ int main(int argc, char** argv)
 
   // TODO: Add noise to motion model
   // motion model
-  Omni omni;
+  const Omni omni;
 
   //////////////////////////////////////////////////////////////////////////////
   const auto map_frame_id = pnh.param<std::string>("map_frame_id", "map");
@@ -159,17 +159,17 @@ int main(int argc, char** argv)
     gaussians.at(i) = { { means[i][0], means[i][1] }, { sigmas[i][0], sigmas[i][1] } };
   }
 
-  Target target(gaussians);
+  const Target target(gaussians);
 
   //////////////////////////////////////////////////////////////////////////////
-  Collision collision(boundary_radius, search_radius, obstacle_threshold,
+  const Collision collision(boundary_radius, search_radius, obstacle_threshold,
                       occupied_threshold);
 
-  ErgodicControl ergodic_control(omni, collision, ec_dt, ec_horizon, target_resolution,
+  const ErgodicControl ergodic_control(omni, collision, ec_dt, ec_horizon, target_resolution,
                                  expl_weight, num_basis, buffer_size, batch_size, R, umin,
                                  umax);
 
-  DynamicWindow dwa(collision, dwa_dt, dwa_horizon, acc_dt, acc_lim_x, acc_lim_y,
+  const DynamicWindow dwa(collision, dwa_dt, dwa_horizon, acc_dt, acc_lim_x, acc_lim_y,
                     acc_lim_th, max_vel_x, min_vel_x, max_vel_y, min_vel_y, max_rot_vel,
                     min_rot_vel, vx_samples, vy_samples, vth_samples);
 
