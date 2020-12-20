@@ -44,7 +44,7 @@ public:
    * @param collision - collision detector
    * @param dwa - dynamic window local planner
    */
-  Exploration(ros::NodeHandle& nh, ErgodicControl<ModelT>& ergodic_control,
+  Exploration(ros::NodeHandle& nh, const ErgodicControl<ModelT>& ergodic_control,
               const Collision& collision, const DynamicWindow& dwa);
 
   /** @brief Initialize subscribers and publishers */
@@ -103,7 +103,7 @@ private:
 
 template <class ModelT>
 Exploration<ModelT>::Exploration(ros::NodeHandle& nh,
-                                 ErgodicControl<ModelT>& ergodic_control,
+                                 const ErgodicControl<ModelT>& ergodic_control,
                                  const Collision& collision, const DynamicWindow& dwa)
   : nh_(nh)
   , ergodic_control_(ergodic_control)
