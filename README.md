@@ -207,7 +207,6 @@ max_vel_y, min_vel_y, acc_lim_y, and vy_samples. You only need to provide the co
 - Implement the [fast shannon mutual information algorithm](https://arxiv.org/pdf/1905.02238.pdf). Provide a node capable of using this with any motion model.
 
 # Citing Ergodic Exploration
-## TODO: update version to 1.0.0 and add release tag
 ```
 @software{ergodicexploration2020github,
   author = {Boston Cleek and Matt Elwin},

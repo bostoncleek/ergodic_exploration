@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="2">
   <name>ergodic_exploration</name>
-  <version>0.0.1</version>
+  <version>1.0.0</version>
   <description> Robot agnostic information theoretic exploration strategy </description>
   <maintainer email="bostoncleek2020@u.northwestern.edu">bostoncleek</maintainer>
   <license>BSD</license>
