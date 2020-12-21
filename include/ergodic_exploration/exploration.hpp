@@ -253,6 +253,8 @@ void Exploration<ModelT>::control(const Target& target, const std::string& map_f
       twist_msg.angular.z = u(2);
 
       cmd_pub_.publish(twist_msg);
+      u.print();
+
     }  // end control loop
 
     rate.sleep();

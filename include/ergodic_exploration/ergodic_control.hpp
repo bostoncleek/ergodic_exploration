@@ -52,14 +52,14 @@ public:
    * @param num_basis - number of cosine basis functions per dimension
    * @param buffer_size - number of past states in memory
    * @param batch_size - number of states sampled from memory
-   * @param R - positive definite matrix that penalizes controls
+   * @param Rinv - inverse of a positive definite matrix that penalizes controls
    * @param umin - body twist lower limits
    * @param umax - body twist upper limits
    */
   ErgodicControl(const ModelT& model, const Collision& collision, double dt,
                  double horizon, double resolution, double exploration_weight,
                  unsigned int num_basis, unsigned int buffer_size,
-                 unsigned int batch_size, const mat& R, const vec& umin, const vec& umax);
+                 unsigned int batch_size, const mat& Rinv, const vec& umin, const vec& umax);
 
   /**
    * @brief Update the control signal
@@ -157,7 +157,7 @@ ErgodicControl<ModelT>::ErgodicControl(const ModelT& model, const Collision& col
                                        double dt, double horizon, double resolution,
                                        double exploration_weight, unsigned int num_basis,
                                        unsigned int buffer_size, unsigned int batch_size,
-                                       const mat& R, const vec& umin, const vec& umax)
+                                       const mat& Rinv, const vec& umin, const vec& umax)
   : model_(model)
   , collision_(collision)
   , dt_(dt)
@@ -165,7 +165,7 @@ ErgodicControl<ModelT>::ErgodicControl(const ModelT& model, const Collision& col
   , resolution_(resolution)
   , expl_weight_(exploration_weight)
   , steps_(static_cast<unsigned int>(std::abs(horizon / dt)))
-  , Rinv_(inv(R))
+  , Rinv_(Rinv)
   , ut_(3, steps_, arma::fill::zeros)  // body twist Vb = [vx, vy, w]
   , phik_(num_basis * num_basis)
   , rhoT_(model.state_space, arma::fill::zeros)

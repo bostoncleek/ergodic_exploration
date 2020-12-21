@@ -126,10 +126,11 @@ int main(int argc, char** argv)
   std::vector<double> control_weights = { 1.0, 1.0, 1.0 };
   pnh.getParam("control_weights", control_weights);
 
-  mat R(3, 3, arma::fill::zeros);
-  R(0, 0) = control_weights.at(0);
-  R(1, 1) = control_weights.at(1);
-  R(2, 2) = control_weights.at(2);
+  // Inverse of diaganol is 1 over the diaganol
+  mat Rinv(3, 3, arma::fill::zeros);
+  Rinv(0, 0) = 1.0 / control_weights.at(0);
+  Rinv(1, 1) = 1.0 / control_weights.at(1);
+  Rinv(2, 2) = 1.0 / control_weights.at(2);
 
   // dwa
   const double dwa_dt = pnh.param("dwa_dt", 0.1);
@@ -166,7 +167,7 @@ int main(int argc, char** argv)
                       occupied_threshold);
 
   const ErgodicControl ergodic_control(omni, collision, ec_dt, ec_horizon, target_resolution,
-                                 expl_weight, num_basis, buffer_size, batch_size, R, umin,
+                                 expl_weight, num_basis, buffer_size, batch_size, Rinv, umin,
                                  umax);
 
   const DynamicWindow dwa(collision, dwa_dt, dwa_horizon, acc_dt, acc_lim_x, acc_lim_y,
