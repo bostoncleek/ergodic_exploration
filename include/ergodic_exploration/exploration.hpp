@@ -21,7 +21,7 @@
 #include <ergodic_exploration/ergodic_control.hpp>
 #include <ergodic_exploration/dynamic_window.hpp>
 
-// TODO: copy constructors for dwa, collision
+#include <ergodic_exploration/models/omni.hpp>
 
 namespace ergodic_exploration
 {
@@ -123,8 +123,8 @@ void Exploration<ModelT>::init()
   odom_sub_ = nh_.subscribe("odom", 1, &Exploration<ModelT>::odomCallback, this);
 
   cmd_pub_ = nh_.advertise<geometry_msgs::Twist>("cmd_vel", 1);
-  opt_traj_pub_ = nh_.advertise<nav_msgs::Path>("trajectory", 1, true);
-  dwa_path_pub_ = nh_.advertise<nav_msgs::Path>("dwa_trajectory", 1, true);
+  opt_traj_pub_ = nh_.advertise<nav_msgs::Path>("trajectory", 1);
+  dwa_path_pub_ = nh_.advertise<nav_msgs::Path>("dwa_trajectory", 1);
   target_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("target", 1, true);
 }
 
@@ -193,14 +193,15 @@ void Exploration<ModelT>::control(const Target& target, const std::string& map_f
       if (follow_dwa)
       {
         i++;
+        // May need to replan
         follow_dwa = (i != dwa_steps) ? true : false;
       }
 
       if (!follow_dwa)
       {
         u = ergodic_control_.control(grid_, pose);
-        const nav_msgs::Path trajectory = ergodic_control_.path(map_frame_id);
 
+        const nav_msgs::Path trajectory = ergodic_control_.path(map_frame_id);
         opt_traj_pub_.publish(trajectory);
       }
 
@@ -238,13 +239,13 @@ void Exploration<ModelT>::control(const Target& target, const std::string& map_f
           if (follow_dwa)
           {
             i = 0;
+
+            // Visualize dwa predicted trajectory
+            const nav_msgs::Path dwa_traj =
+                constTwistPath(map_frame_id, pose, u, dwa_.timeStep(), dwa_.horizon());
+            dwa_path_pub_.publish(dwa_traj);
           }
         }
-
-        const nav_msgs::Path dwa_traj =
-            constTwistPath(map_frame_id, pose, u, dwa_.timeStep(), dwa_.horizon());
-
-        dwa_path_pub_.publish(dwa_traj);
       }  // end validate control
 
       geometry_msgs::Twist twist_msg;
@@ -253,7 +254,7 @@ void Exploration<ModelT>::control(const Target& target, const std::string& map_f
       twist_msg.angular.z = u(2);
 
       cmd_pub_.publish(twist_msg);
-      u.print();
+      // u.print();
 
     }  // end control loop
 
