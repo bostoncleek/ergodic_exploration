@@ -59,7 +59,8 @@ public:
   ErgodicControl(const ModelT& model, const Collision& collision, double dt,
                  double horizon, double resolution, double exploration_weight,
                  unsigned int num_basis, unsigned int buffer_size,
-                 unsigned int batch_size, const mat& Rinv, const vec& umin, const vec& umax);
+                 unsigned int batch_size, const mat& Rinv, const vec& umin,
+                 const vec& umax);
 
   /**
    * @brief Update the control signal
