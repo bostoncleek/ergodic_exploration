@@ -19,7 +19,8 @@ TEST(GridTest, Grid2RowMajor)
   const auto ysize = ergodic_exploration::axis_length(ymin, ymax, resolution);
   const ergodic_exploration::GridData grid_data(xsize * ysize, 0);
 
-  const ergodic_exploration::GridMap grid_map(xmin, xmax, ymin, ymax, resolution, grid_data);
+  const ergodic_exploration::GridMap grid_map(xmin, xmax, ymin, ymax, resolution,
+                                              grid_data);
 
   // Convert grid index to row major order
   const auto i = 2;
@@ -40,7 +41,8 @@ TEST(GridTest, RowMajor2Grid)
   const auto ysize = ergodic_exploration::axis_length(ymin, ymax, resolution);
   const ergodic_exploration::GridData grid_data(xsize * ysize, 0);
 
-  const ergodic_exploration::GridMap grid_map(xmin, xmax, ymin, ymax, resolution, grid_data);
+  const ergodic_exploration::GridMap grid_map(xmin, xmax, ymin, ymax, resolution,
+                                              grid_data);
 
   // Convert row major order index to row and column ndex
   const auto idx = 5;
@@ -61,7 +63,8 @@ TEST(GridTest, GridBoundsRowMajor)
   const auto ysize = ergodic_exploration::axis_length(ymin, ymax, resolution);
   const ergodic_exploration::GridData grid_data(xsize * ysize, 0);
 
-  const ergodic_exploration::GridMap grid_map(xmin, xmax, ymin, ymax, resolution, grid_data);
+  const ergodic_exploration::GridMap grid_map(xmin, xmax, ymin, ymax, resolution,
+                                              grid_data);
 
   const auto idx1 = 5;
   ASSERT_TRUE(grid_map.gridBounds(idx1));
@@ -81,7 +84,8 @@ TEST(GridTest, GridBoundsCoordinates)
   const auto ysize = ergodic_exploration::axis_length(ymin, ymax, resolution);
   const ergodic_exploration::GridData grid_data(xsize * ysize, 0);
 
-  const ergodic_exploration::GridMap grid_map(xmin, xmax, ymin, ymax, resolution, grid_data);
+  const ergodic_exploration::GridMap grid_map(xmin, xmax, ymin, ymax, resolution,
+                                              grid_data);
 
   const auto i1 = 2;
   const auto j1 = 0;
@@ -103,7 +107,8 @@ TEST(GridTest, Grid2World)
   const auto ysize = ergodic_exploration::axis_length(ymin, ymax, resolution);
   const ergodic_exploration::GridData grid_data(xsize * ysize, 0);
 
-  const ergodic_exploration::GridMap grid_map(xmin, xmax, ymin, ymax, resolution, grid_data);
+  const ergodic_exploration::GridMap grid_map(xmin, xmax, ymin, ymax, resolution,
+                                              grid_data);
 
   const auto i1 = 0;
   const auto j1 = 1;
@@ -129,7 +134,8 @@ TEST(GridTest, World2Grid)
   const auto ysize = ergodic_exploration::axis_length(ymin, ymax, resolution);
   const ergodic_exploration::GridData grid_data(xsize * ysize, 0);
 
-  const ergodic_exploration::GridMap grid_map(xmin, xmax, ymin, ymax, resolution, grid_data);
+  const ergodic_exploration::GridMap grid_map(xmin, xmax, ymin, ymax, resolution,
+                                              grid_data);
 
   const auto x1 = -0.25;
   const auto y1 = 1.25;
@@ -158,7 +164,8 @@ TEST(GridTest, GetCellValue)
   grid_data.at(3) = 100;
   grid_data.at(4) = 90;
 
-  const ergodic_exploration::GridMap grid_map(xmin, xmax, ymin, ymax, resolution, grid_data);
+  const ergodic_exploration::GridMap grid_map(xmin, xmax, ymin, ymax, resolution,
+                                              grid_data);
 
   const auto x = -0.25;
   const auto y = 1.25;
