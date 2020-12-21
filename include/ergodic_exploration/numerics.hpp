@@ -203,7 +203,7 @@ inline mat transform2dInv(const mat& trans2d)
  * @param x - current state [x, y, theta]
  * @param vb - current twist [vx, vy, w]
  * @param dt - time step
- * @return transform from b to b' [dx, dy, dtheta]
+ * @return new pose
  */
 inline vec integrate_twist(const vec& x, const vec& u, double dt)
 {
@@ -229,7 +229,7 @@ inline vec integrate_twist(const vec& x, const vec& u, double dt)
     dqb(2) = vb(2);
   }
 
-  return transform2d(x(2)) * dqb;
+  return x + transform2d(x(2)) * dqb;
 }
 
 /**
@@ -248,12 +248,13 @@ inline bool validate_control(const Collision& collision, const GridMap& grid,
                              const vec& x0, const vec& u, double dt, double horizon)
 {
   vec x = x0;
-  const vec delta = integrate_twist(x, u, dt);
   const auto steps = static_cast<unsigned int>(std::abs(horizon / dt));
 
   for (unsigned int i = 0; i < steps; i++)
   {
-    x += delta;
+    x = integrate_twist(x, u, dt);
+    x(2) = normalize_angle_PI(x(2));
+
     if (collision.collisionCheck(grid, x))
     {
       return false;
@@ -281,11 +282,9 @@ inline nav_msgs::Path constTwistPath(const std::string& map_frame_id, const vec&
   path.poses.resize(steps);
 
   vec x = x0;
-  const vec delta = integrate_twist(x, u, dt);
-
   for (unsigned int i = 0; i < steps; i++)
   {
-    x += delta;
+    x = integrate_twist(x, u, dt);
 
     path.poses.at(i).pose.position.x = x(0);
     path.poses.at(i).pose.position.y = x(1);

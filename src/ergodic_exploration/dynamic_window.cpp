@@ -206,12 +206,11 @@ tuple<vec, vec> DynamicWindow::window(const vec& vb) const
 double DynamicWindow::objective(const GridMap& grid, const vec& x0, const vec& vref,
                                 const vec& u) const
 {
-  vec pose = x0;
   // follow constant twist
-  const vec delta = integrate_twist(pose, u, dt_);
+  vec pose = x0;
   for (unsigned int i = 0; i < steps_; i++)
   {
-    pose += delta;
+    pose = integrate_twist(pose, u, dt_);
     pose(2) = normalize_angle_PI(pose(2));
 
     if (collision_.collisionCheck(grid, pose))
@@ -225,19 +224,17 @@ double DynamicWindow::objective(const GridMap& grid, const vec& x0, const vec& v
   return dot(cntrl_error, cntrl_error);
 }
 
-double DynamicWindow::objective(const GridMap& grid, const vec& x0,
-                                             const vec& u, const mat& xt_ref,
-                                             double tf) const
+double DynamicWindow::objective(const GridMap& grid, const vec& x0, const vec& u,
+                                const mat& xt_ref, double tf) const
 {
   vec pose = x0;
   auto t = 0.0;
   auto cost = 0.0;
 
   // follow constant twist
-  const vec delta = integrate_twist(pose, u, dt_);
   for (unsigned int i = 0; i < steps_; i++)
   {
-    pose += delta;
+    pose = integrate_twist(pose, u, dt_);
     pose(2) = normalize_angle_PI(pose(2));
 
     if (collision_.collisionCheck(grid, pose))
