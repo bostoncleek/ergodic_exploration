@@ -114,10 +114,11 @@ int main(int argc, char** argv)
   std::vector<double> control_weights = { 1.0, 1.0 };
   pnh.getParam("control_weights", control_weights);
 
+  // this is technically not the inverse but the penalty for vy is not used
   mat Rinv(3, 3, arma::fill::zeros);
   Rinv(0, 0) = 1.0 / control_weights.at(0);
-  Rinv(1, 1) = 0.0; // this is technically not the inverse but the penalty for vy is not used
-  Rinv(2, 2) = 1.0 /control_weights.at(1);
+  Rinv(1, 1) = 0.0;
+  Rinv(2, 2) = 1.0 / control_weights.at(1);
 
   // dwa
   const double dwa_dt = pnh.param("dwa_dt", 0.1);
@@ -150,15 +151,15 @@ int main(int argc, char** argv)
 
   //////////////////////////////////////////////////////////////////////////////
   const Collision collision(boundary_radius, search_radius, obstacle_threshold,
-                      occupied_threshold);
+                            occupied_threshold);
 
-  const ErgodicControl ergodic_control(cart, collision, ec_dt, ec_horizon, target_resolution,
-                                 expl_weight, num_basis, buffer_size, batch_size, Rinv, umin,
-                                 umax);
+  const ErgodicControl ergodic_control(cart, collision, ec_dt, ec_horizon,
+                                       target_resolution, expl_weight, num_basis,
+                                       buffer_size, batch_size, Rinv, umin, umax);
 
-  const DynamicWindow dwa(collision, dwa_dt, dwa_horizon, acc_dt, acc_lim_x, 0.0, acc_lim_th,
-                    max_vel_x, min_vel_x, 0.0, 0.0, max_rot_vel, min_rot_vel, vx_samples,
-                    0.0, vth_samples);
+  const DynamicWindow dwa(collision, dwa_dt, dwa_horizon, acc_dt, acc_lim_x, 0.0,
+                          acc_lim_th, max_vel_x, min_vel_x, 0.0, 0.0, max_rot_vel,
+                          min_rot_vel, vx_samples, 0.0, vth_samples);
 
   ergodic_exploration::Exploration<SimpleCart> exploration(nh, ergodic_control, collision,
                                                            dwa);

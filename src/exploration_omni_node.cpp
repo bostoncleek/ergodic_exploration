@@ -164,15 +164,15 @@ int main(int argc, char** argv)
 
   //////////////////////////////////////////////////////////////////////////////
   const Collision collision(boundary_radius, search_radius, obstacle_threshold,
-                      occupied_threshold);
+                            occupied_threshold);
 
-  const ErgodicControl ergodic_control(omni, collision, ec_dt, ec_horizon, target_resolution,
-                                 expl_weight, num_basis, buffer_size, batch_size, Rinv, umin,
-                                 umax);
+  const ErgodicControl ergodic_control(omni, collision, ec_dt, ec_horizon,
+                                       target_resolution, expl_weight, num_basis,
+                                       buffer_size, batch_size, Rinv, umin, umax);
 
   const DynamicWindow dwa(collision, dwa_dt, dwa_horizon, acc_dt, acc_lim_x, acc_lim_y,
-                    acc_lim_th, max_vel_x, min_vel_x, max_vel_y, min_vel_y, max_rot_vel,
-                    min_rot_vel, vx_samples, vy_samples, vth_samples);
+                          acc_lim_th, max_vel_x, min_vel_x, max_vel_y, min_vel_y,
+                          max_rot_vel, min_rot_vel, vx_samples, vy_samples, vth_samples);
 
   ergodic_exploration::Exploration<Omni> exploration(nh, ergodic_control, collision, dwa);
 
