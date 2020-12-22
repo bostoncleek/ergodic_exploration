@@ -1,54 +1,85 @@
+/*********************************************************************
+ * BSD 3-Clause License
+ *
+ * Copyright (c) 2020 Northwestern University
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ *  * Redistributions of source code must retain the above copyright notice, this
+ *    list of conditions and the following disclaimer.
+ *
+ *  * Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ *  * Neither the name of the copyright holder nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *********************************************************************/
 /**
  * @file exploration_node.cpp
  * @author Boston Cleek
  * @date 23 Oct 2020
  * @brief Ergodic exploration using an omni driectional robot
-
- PARAMETERS:
-    map_frame_id - map frame id
-    base_frame_id - base link frame id
-    frequency - control loop frequency (Hz)
-    val_dt - control validation time step for collision detection (s)
-    val_horizon - control validation horizon for collision detection (s)
-    max_vel_x - max x velcocity (m/s)
-    max_vel_y -  max y velcocity (m/s)
-    max_rot_vel - max ratotional velcocity (rad/s)
-    min_vel_x - min x velcocity (m/s)
-    min_vel_y - min y velcocity (m/s)
-    min_rot_vel - min ratotional velcocity (rad/s)
-    acc_lim_x - x acceleration limit (m/s^2)
-    acc_lim_y - y acceleration limit (m/s^2)
-    acc_lim_th - rotational acceleration limit (rad/s^2)
-    boundary_radius - bounding radius around robot (m)
-    search_radius - max search radius for collision detection (m)
-    obstacle_threshold - obstacles within radius from boundary are cosidered collisions (m)
-    occupied_threshold - occupancy grid cell probability to be considered an obstacle [0 1]
-    ec_dt - time step used in integration (s)
-    ec_horizon - control horizon (s)
-    target_resolution - target grid resolution (m)
-    expl_weight - ergodic exploration weight
-    num_basis - number of basis functions
-    buffer_size - total number of past states stored
-    batch_size - number of past states randomly sampled in each control loop
-    control_weights - weights on twist [vx vy w]
-    dwa_dt - time step used in integration (s)
-    dwa_horizon - control horizon (s)
-    acc_dt - time step the acceleration limits are applied (s)
-    vx_samples - number of x velcocity samples
-    vy_samples - number of y velcocity samples
-    vth_samples - number of rotational velcocity samples
-    means - target x and y means (m)
-    sigmas - target x and y standard deviations (m)
-
- PUBLISHES:
-    cmd_vel (geometry_msgs/Twist) - body twist
-    trajectory (nav_msgs/Path) - ergodic controller optimized trajectory
-    dwa_trajectory (nav_msgs/Path) - dynamic window trajectory
-    target (visualization_msgs/MarkerArray) - target distribution
-
- SUBSCRIBES:
-    map (nav_msgs/OccupancyGrid) - occupancy grid
-    odom (nav_msgs/Odometry) - robot's odometry
+ *
+ * @PARAMETERS:
+ *  * map_frame_id - map frame id
+ *  * base_frame_id - base link frame id
+ *  * frequency - control loop frequency (Hz)
+ *  * val_dt - control validation time step for collision detection (s)
+ *  * val_horizon - control validation horizon for collision detection (s)
+ *  * max_vel_x - max x velcocity (m/s)
+ *  * max_vel_y -  max y velcocity (m/s)
+ *  * max_rot_vel - max ratotional velcocity (rad/s)
+ *  * min_vel_x - min x velcocity (m/s)
+ *  * min_vel_y - min y velcocity (m/s)
+ *  * min_rot_vel - min ratotional velcocity (rad/s)
+ *  * acc_lim_x - x acceleration limit (m/s^2)
+ *  * acc_lim_y - y acceleration limit (m/s^2)
+ *  * acc_lim_th - rotational acceleration limit (rad/s^2)
+ *  * boundary_radius - bounding radius around robot (m)
+ *  * search_radius - max search radius for collision detection (m)
+ *  * obstacle_threshold - obstacles within radius from boundary are cosidered collisions (m)
+ *  * occupied_threshold - occupancy grid cell probability to be considered an obstacle [0 1]
+ *  * ec_dt - time step used in integration (s)
+ *  * ec_horizon - control horizon (s)
+ *  * target_resolution - target grid resolution (m)
+ *  * expl_weight - ergodic exploration weight
+ *  * num_basis - number of basis functions
+ *  * buffer_size - total number of past states stored
+ *  * batch_size - number of past states randomly sampled in each control loop
+ *  * control_weights - weights on twist [vx vy w]
+ *  * dwa_dt - time step used in integration (s)
+ *  * dwa_horizon - control horizon (s)
+ *  * acc_dt - time step the acceleration limits are applied (s)
+ *  * vx_samples - number of x velcocity samples
+ *  * vy_samples - number of y velcocity samples
+ *  * vth_samples - number of rotational velcocity samples
+ *  * means - target x and y means (m)
+ *  * sigmas - target x and y standard deviations (m)
+ *
+ * @PUBLISHES:
+ *  * cmd_vel (geometry_msgs/Twist) - body twist
+ *  * trajectory (nav_msgs/Path) - ergodic controller optimzed trajectory
+ *  * dwa_trajectory (nav_msgs/Path) - dynamic window trajectory
+ *  * target (visualization_msgs/MarkerArray) - target distribution
+ *
+ * @SUBSCRIBES:
+ *  * map (nav_msgs/OccupancyGrid) - occupancy grid
+ *  * odom (nav_msgs/Odometry) - robot's odometry
  */
 
 #include <ergodic_exploration/models/omni.hpp>
