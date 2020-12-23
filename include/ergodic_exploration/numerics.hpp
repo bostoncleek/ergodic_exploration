@@ -108,6 +108,40 @@ inline double normalize_angle_2PI(double rad)
 }
 
 /**
+ * @brief Get yaw from quaternion
+ * @param qx - x-axis rotation component
+ * @param qy - y-axis rotation component
+ * @param qz - z-axis rotation component
+ * @param qw - rotation magnitude
+ * @return yaw (rad)
+ */
+inline double getYaw(double qx, double qy, double qz, double qw)
+{
+  // TODO: add unit test
+  // Source: https://github.com/ros/geometry2/blob/noetic-devel/tf2/include/tf2/impl/utils.h#L122
+  const auto sqx = qx * qx;
+  const auto sqy = qy * qy;
+  const auto sqz = qz * qz;
+  const auto sqw = qw * qw;
+
+  // Normalization added from urdfom_headers
+  const auto sarg = -2.0 * (qx * qz - qw * qy) / (sqx + sqy + sqz + sqw);
+
+  // Cases derived from https://orbitalstation.wordpress.com/tag/quaternion/
+  if (sarg < -0.99999 || almost_equal(sarg, -0.99999))
+  {
+    return -2.0 * std::atan2(qy, qx);
+  }
+
+  else if (sarg > 0.99999 || almost_equal(sarg, 0.99999))
+  {
+    return 2.0 * std::atan2(qy, qx);
+  }
+
+  return std::atan2(2.0 * (qx * qy + qw * qz), sqw + sqx - sqy - sqz);
+}
+
+/**
  * @brief Euclidean distance between two points
  * @param x0 - x-position point 0
  * @param y0 - y-position point 0

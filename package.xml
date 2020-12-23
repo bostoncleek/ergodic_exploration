@@ -10,7 +10,6 @@
   <depend>armadillo</depend>
 
   <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>gazebo_msgs</build_depend>
   <build_depend>geometry_msgs</build_depend>
   <build_depend>nav_msgs</build_depend>
   <build_depend>roscpp</build_depend>

@@ -46,8 +46,6 @@
 #include <sensor_msgs/LaserScan.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2/LinearMath/Quaternion.h>
-#include <tf2/utils.h>
-#include <gazebo_msgs/ModelStates.h>
 
 #include <ergodic_exploration/ergodic_control.hpp>
 #include <ergodic_exploration/dynamic_window.hpp>
@@ -204,7 +202,8 @@ void Exploration<ModelT>::control(const Target& target, const std::string& map_f
           tfBuffer_.lookupTransform(map_frame_id, base_frame_id, ros::Time(0));
       pose(0) = t_map_base.transform.translation.x;
       pose(1) = t_map_base.transform.translation.y;
-      pose(2) = normalize_angle_PI(tf2::getYaw(t_map_base.transform.rotation));
+      pose(2) = getYaw(t_map_base.transform.rotation.x, t_map_base.transform.rotation.y,
+                       t_map_base.transform.rotation.z, t_map_base.transform.rotation.w);
 
       // Add state to memory
       ergodic_control_.addStateMemory(pose);
