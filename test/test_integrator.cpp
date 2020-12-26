@@ -41,7 +41,7 @@
 #include <ergodic_exploration/models/omni.hpp>
 #include <ergodic_exploration/integrator.hpp>
 
-TEST(RungeKuttaTest, Simulate)
+TEST(IntegratorTest, RungeKutta)
 {
   const ergodic_exploration::models::Cart cart(0.1, 2.0);
   const auto horizon = 0.4;
@@ -72,9 +72,8 @@ TEST(RungeKuttaTest, Simulate)
   ASSERT_DOUBLE_EQ(xt(2, 3), 0.0);
 }
 
-TEST(IntegrateTwistTest, OmniPoseChange)
+TEST(IntegratorTest, OmniPoseChange)
 {
-  const auto horizon = 1.0;
   const auto dt = 0.1;
   const arma::vec vb = { 1.0, 0.5, 0.5 };
   const arma::vec x0(3, arma::fill::zeros);
@@ -93,7 +92,7 @@ TEST(IntegrateTwistTest, OmniPoseChange)
   ASSERT_NEAR(pose(2), 0.0500, 1e-4);
 }
 
-TEST(IntegrateTwistTest, OmniTrajectory)
+TEST(IntegratorTest, OmniTrajectory)
 {
   const auto horizon = 0.5;
   const auto dt = 0.1;
