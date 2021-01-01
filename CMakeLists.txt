@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.9)
 project(ergodic_exploration)
 
 # add compile options
-add_compile_options(-Wall -Wextra)
+add_compile_options(-Wall -Wextra -Wno-psabi)
 
 # Compile as C++20
 set(CMAKE_CXX_STANDARD 20)
