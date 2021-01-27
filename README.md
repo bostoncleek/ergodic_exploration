@@ -107,6 +107,8 @@ Below, the robot was given a control signal to drive forward. This control sends
 </p>
 
 # Getting Started
+The easiest way to install is to run `sudo apt install ros-noetic-ergodic-exploration` or follow the instructions below to build from source. 
+
 ## Dependencies
 This package was built and tested using [Armadillo](http://arma.sourceforge.net/) 10.1.1. You will need to install Armadillo.
 
